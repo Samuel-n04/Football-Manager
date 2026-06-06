@@ -9,6 +9,7 @@ import numpy as np
 import math
 import torch
 from collections import defaultdict
+from scipy.optimize import linear_sum_assignment
 from ultralytics import YOLO
 
 # ── Vidéo en argument ou valeur par défaut ────────────────────────────────────
@@ -50,11 +51,15 @@ _player_appearances = {} # pno → feature vector (np.ndarray, normalisé)
 _next_player_no   = 1
 
 REID_MAX_FRAMES  = 120   # ~4 s à 30 fps
-REID_MAX_DIST    = 220   # pixels : distance max position (prédite) pour accepter un match
-REID_POS_WEIGHT  = 0.35  # poids position dans le coût
-REID_APP_WEIGHT  = 0.65  # poids apparence dans le coût
-REID_MAX_COST    = 0.60  # coût max pour accepter un réassignement (sinon nouveau joueur)
+REID_MAX_DIST    = 180   # pixels : distance max position (prédite) pour accepter un match
+REID_POS_WEIGHT  = 0.30  # poids position dans le coût
+REID_APP_WEIGHT  = 0.70  # poids apparence dans le coût
+REID_MAX_COST    = 0.48  # coût max pour accepter un réassignement (sinon nouveau joueur)
 JERSEY_MAX_HIST  = 150   # cap sur l'historique couleur maillot
+
+# Détection de switch interne du tracker (même tid → joueur différent)
+TRACKER_SWITCH_MAX_DIST = 160  # pixels : saut max toléré pour un tid déjà connu
+TRACKER_SWITCH_APP_MIN  = 0.30 # similarité apparence minimale pour garder un tid connu
 
 # ── Stats par joueur ──────────────────────────────────────────────────────────
 _player_speeds    = defaultdict(list)
@@ -69,6 +74,12 @@ SPRINT_END_THRESH = 20.0
 _sprint_active = {}
 _sprint_count  = defaultdict(int)
 _sprint_frames = defaultdict(int)
+
+# ── Distance + Fatigue + Position ─────────────────────────────────────────────
+_player_distance   = defaultdict(float)   # pno → mètres parcourus (corrigé caméra)
+_player_speed_hist = defaultdict(list)    # pno → [(frame, speed_kmh), ...]
+_player_positions  = defaultdict(list)    # pno → [(cx, cy), ...] (sous-échantillonné)
+_player_prev_pos   = {}                   # pno → (cx, cy) frame précédente (pixels bruts)
 
 # ── Possession ────────────────────────────────────────────────────────────────
 POSSESSION_MAX_DIST  = 80          # pixels : distance max pour attribuer la possession
@@ -120,18 +131,31 @@ def player_color(pno):
 
 def get_appearance_feature(frame, xyxy):
     """
-    Histogramme HSV (H×16 + S×16) de la moitié supérieure de la bbox.
-    Vecteur normalisé L2 → similarité cosinus directe.
+    Histogramme HSV 32 bins par région (maillot + short) → vecteur 128d normalisé L2.
+    Séparer maillot et short permet de distinguer les coéquipiers portant le même jersey.
     """
     x1, y1, x2, y2 = [int(round(float(v))) for v in xyxy]
     h_box = max(1, y2 - y1)
-    crop  = frame[y1 : y1 + int(0.60 * h_box), max(0, x1) : max(0, x2)]
-    if crop.size == 0:
-        return None
-    hsv  = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
-    h_h  = cv2.calcHist([hsv], [0], None, [16], [0, 180]).flatten()
-    h_s  = cv2.calcHist([hsv], [1], None, [16], [0, 256]).flatten()
-    feat = np.concatenate([h_h, h_s]).astype(np.float32)
+    w_box = max(1, x2 - x1)
+    px1 = max(0, x1 + int(0.12 * w_box))
+    px2 = max(0, x2 - int(0.12 * w_box))
+
+    # Maillot : 15 %–52 % de la hauteur
+    top = frame[y1 + int(0.15 * h_box) : y1 + int(0.52 * h_box), px1:px2]
+    # Short  : 52 %–82 % de la hauteur
+    bot = frame[y1 + int(0.52 * h_box) : y1 + int(0.82 * h_box), px1:px2]
+
+    parts = []
+    for crop in (top, bot):
+        if crop.size == 0:
+            parts.append(np.zeros(64, dtype=np.float32))
+            continue
+        hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
+        h_h = cv2.calcHist([hsv], [0], None, [32], [0, 180]).flatten()
+        h_s = cv2.calcHist([hsv], [1], None, [32], [0, 256]).flatten()
+        parts.append(np.concatenate([h_h, h_s]).astype(np.float32))
+
+    feat = np.concatenate(parts)
     norm = np.linalg.norm(feat)
     return feat / norm if norm > 1e-6 else None
 
@@ -206,21 +230,37 @@ def batch_assign_players(person_dets, frame):
     Retourne    : dict tid → pno
 
     Algorithme :
-      1. Tids déjà connus  → réassignation directe + mise à jour état.
-      2. Tids nouveaux     → coût (position prédite + apparence), assignation
-                             greedy sur liste triée par coût croissant.
+      1. Tids déjà connus  → réassignation directe après vérification de cohérence
+                             (détecte les switches internes du tracker ByteTrack).
+      2. Tids nouveaux     → assignation optimale via Hungarian algorithm
+                             (scipy.optimize.linear_sum_assignment).
       3. Sans correspondance → nouveau numéro de joueur.
     """
     global _next_player_no
     result = {}
 
-    # ── 1. Tids connus ────────────────────────────────────────────────────────
+    # ── 1. Tids connus — avec vérification anti-switch ────────────────────────
     for tid, cx, cy, xyxy in person_dets:
         if tid not in _player_by_tid:
             continue
         pno = _player_by_tid[tid]
-        _tid_last_seen[tid] = _frame_count
         feat = get_appearance_feature(frame, xyxy)
+
+        # Vérifier que le tid n'a pas sauté sur un autre joueur (tracker switch)
+        pred_cx, pred_cy = _predicted_pos(pno)
+        if pred_cx is not None:
+            jump = math.hypot(cx - pred_cx, cy - pred_cy)
+            if jump > TRACKER_SWITCH_MAX_DIST:
+                # Saut de position trop grand → vérifier aussi l'apparence
+                prev_feat = _player_appearances.get(pno)
+                app_ok = (feat is None or prev_feat is None
+                          or float(np.dot(feat, prev_feat)) >= TRACKER_SWITCH_APP_MIN)
+                if not app_ok:
+                    # Switch confirmé : libérer ce tid pour la réidentification
+                    del _player_by_tid[tid]
+                    continue
+
+        _tid_last_seen[tid] = _frame_count
         _update_player_state(pno, cx, cy, feat)
         result[tid] = pno
 
@@ -237,33 +277,35 @@ def batch_assign_players(person_dets, frame):
         and _frame_count - st['frame'] <= REID_MAX_FRAMES
     ]
 
-    # ── 3. Matrice de coûts + tri ─────────────────────────────────────────────
-    costs = []
-    feat_cache = {}
-    for tid, cx, cy, xyxy in new_dets:
-        feat = get_appearance_feature(frame, xyxy)
-        feat_cache[tid] = feat
-        for pno in inactive_pnos:
-            c = _reid_cost(cx, cy, feat, pno)
-            if c < REID_MAX_COST:
-                costs.append((c, tid, pno))
+    # ── 3. Précalcul features + matrice de coûts complète ────────────────────
+    feat_cache = {tid: get_appearance_feature(frame, xyxy)
+                  for tid, cx, cy, xyxy in new_dets}
 
-    costs.sort(key=lambda x: x[0])
-
-    # ── 4. Assignation greedy (coût croissant) ────────────────────────────────
-    assigned_tids = set()
     assigned_pnos = set()
-    for c, tid, pno in costs:
-        if tid in assigned_tids or pno in assigned_pnos:
-            continue
-        cx  = next(cx_ for t, cx_, cy_, _ in new_dets if t == tid)
-        cy  = next(cy_ for t, cx_, cy_, _ in new_dets if t == tid)
-        _player_by_tid[tid] = pno
-        _tid_last_seen[tid]  = _frame_count
-        _update_player_state(pno, cx, cy, feat_cache[tid])
-        result[tid] = pno
-        assigned_tids.add(tid)
-        assigned_pnos.add(pno)
+    if inactive_pnos:
+        n = len(new_dets)
+        m = len(inactive_pnos)
+        # Initialiser au-dessus du seuil (détections sans match valide)
+        cost_matrix = np.full((n, m), REID_MAX_COST + 1.0, dtype=np.float64)
+
+        for i, (tid, cx, cy, _) in enumerate(new_dets):
+            for j, pno in enumerate(inactive_pnos):
+                c = _reid_cost(cx, cy, feat_cache[tid], pno)
+                if c < REID_MAX_COST:
+                    cost_matrix[i, j] = c
+
+        # ── 4. Assignation optimale (Hungarian) ──────────────────────────────
+        row_ind, col_ind = linear_sum_assignment(cost_matrix)
+        for i, j in zip(row_ind, col_ind):
+            if cost_matrix[i, j] >= REID_MAX_COST:
+                continue
+            tid, cx, cy, xyxy = new_dets[i]
+            pno = inactive_pnos[j]
+            _player_by_tid[tid] = pno
+            _tid_last_seen[tid]  = _frame_count
+            _update_player_state(pno, cx, cy, feat_cache[tid])
+            result[tid] = pno
+            assigned_pnos.add(pno)
 
     # ── 5. Nouveaux joueurs sans correspondance ────────────────────────────────
     for tid, cx, cy, xyxy in new_dets:
@@ -273,9 +315,7 @@ def batch_assign_players(person_dets, frame):
         _next_player_no += 1
         _player_by_tid[tid] = pno
         _tid_last_seen[tid]  = _frame_count
-        cached = feat_cache.get(tid)
-        feat = cached if cached is not None else get_appearance_feature(frame, xyxy)
-        _update_player_state(pno, cx, cy, feat)
+        _update_player_state(pno, cx, cy, feat_cache.get(tid))
         result[tid] = pno
 
     return result
@@ -526,15 +566,90 @@ def iou(a, b):
 # Stats
 # ═══════════════════════════════════════════════════════════════════════════════
 
+def _fatigue_index(pno):
+    """
+    Indice de fatigue [0–100] basé sur le déclin de vitesse moyenne.
+    Compare le premier quart de présence du joueur au dernier quart.
+    Retourne None si pas assez de données (<40 frames).
+    """
+    hist = _player_speed_hist[pno]
+    if len(hist) < 40:
+        return None
+    speeds = [s for _, s in hist]
+    q = max(1, len(speeds) // 4)
+    first_avg = sum(speeds[:q]) / q
+    last_avg  = sum(speeds[-q:]) / q
+    if first_avg < 1.0:   # joueur quasi-immobile → indice non pertinent
+        return None
+    return round(max(0.0, min(100.0, (1.0 - last_avg / first_avg) * 100.0)), 1)
+
+
+def _estimate_poste(pno, avg_pos, std_x_all):
+    """
+    Estime le poste d'un joueur à partir de :
+      - la variance de sa position x (faible variance → gardien)
+      - son rang de position x au sein de son équipe (défenseur/milieu/attaquant)
+    Retourne None si pas assez de données.
+    """
+    if _is_referee.get(pno):
+        return "Arbitre"
+    pos = _player_positions.get(pno, [])
+    if len(pos) < 5:
+        return None
+
+    std_x = float(np.std([p[0] for p in pos]))
+    # Seuil = percentile 15 de tous les joueurs (les plus statiques = gardiens)
+    threshold = float(np.percentile(std_x_all, 15)) if len(std_x_all) >= 4 else 40.0
+    threshold = max(threshold, 25.0)
+    if std_x <= threshold:
+        return "Gardien"
+
+    team = _player_team.get(pno)
+    if team is None or pno not in avg_pos:
+        return None
+
+    team_pnos = [p for p in avg_pos if _player_team.get(p) == team and not _is_referee.get(p)]
+    if len(team_pnos) < 2:
+        return None
+
+    sorted_by_x = sorted(team_pnos, key=lambda p: avg_pos[p][0])
+    try:
+        rank = sorted_by_x.index(pno)
+    except ValueError:
+        return None
+    n   = len(sorted_by_x)
+    pct = rank / max(n - 1, 1)
+
+    if pct < 0.30:
+        return "Défenseur"
+    elif pct < 0.65:
+        return "Milieu"
+    else:
+        return "Attaquant"
+
+
 def save_stats(video_path, stats_path, fps, frame_count):
-    all_pnos        = (set(_player_speeds.keys())
-                       | set(_passes_attempted.keys())
-                       | set(_passes_received.keys())
-                       | set(_possession_frames.keys()))
+    all_pnos = (set(_player_speeds.keys())
+                | set(_passes_attempted.keys())
+                | set(_passes_received.keys())
+                | set(_possession_frames.keys()))
     players  = {}
     arbitres = {}
 
     total_possession = max(sum(_possession_frames.values()), 1)
+
+    # Pré-calcul position moyenne et std-x (pour estimation des postes)
+    avg_pos = {}
+    for pno in all_pnos:
+        pos = _player_positions.get(pno, [])
+        if pos:
+            avg_pos[pno] = (float(np.mean([p[0] for p in pos])),
+                            float(np.mean([p[1] for p in pos])))
+
+    std_x_all = [float(np.std([p[0] for p in _player_positions[pno]]))
+                 for pno in all_pnos
+                 if len(_player_positions.get(pno, [])) >= 5
+                 and not _is_referee.get(pno)]
 
     for pno in sorted(all_pnos):
         speeds      = _player_speeds[pno]
@@ -544,16 +659,24 @@ def save_stats(video_path, stats_path, fps, frame_count):
         vitesse_moy = round(sum(speeds) / len(speeds), 2) if speeds else 0.0
         vitesse_max = round(max(speeds), 2) if speeds else 0.0
         poss_pct    = round(_possession_frames[pno] / total_possession * 100, 1)
+        distance_m  = round(_player_distance[pno], 1)
+        fatigue     = _fatigue_index(pno)
+        poste       = _estimate_poste(pno, avg_pos, std_x_all)
 
         if _is_referee.get(pno):
             arbitres[str(pno)] = {
                 "vitesse_moyenne_kmh": vitesse_moy,
                 "vitesse_max_kmh":     vitesse_max,
+                "distance_m":          distance_m,
             }
         else:
             players[str(pno)] = {
+                "player_id":            pno,
+                "equipe":               _player_team.get(pno),
+                "poste":                poste,
                 "vitesse_moyenne_kmh":  vitesse_moy,
                 "vitesse_max_kmh":      vitesse_max,
+                "distance_m":           distance_m,
                 "sprints":              _sprint_count[pno],
                 "temps_sprint_sec":     round(_sprint_frames[pno] / max(fps, 1.0), 1),
                 "passes_tentees":       attempted,
@@ -561,7 +684,7 @@ def save_stats(video_path, stats_path, fps, frame_count):
                 "passes_recues":        _passes_received[pno],
                 "taux_reussite_passes": rate,
                 "possession_pct":       poss_pct,
-                "equipe":               _player_team.get(pno),
+                "fatigue_index":        fatigue,
             }
 
     # Possession par équipe
@@ -576,40 +699,42 @@ def save_stats(video_path, stats_path, fps, frame_count):
     }
 
     stats = {
-        "video":               video_path,
-        "duree_secondes":      round(frame_count / max(fps, 1.0), 1),
-        "frames_traitees":     frame_count,
-        "joueurs":             players,
-        "arbitres":            arbitres,
-        "total_passes":        sum(_passes_made.values()),
-        "possession_equipes":  possession_equipes,
+        "video":              video_path,
+        "duree_secondes":     round(frame_count / max(fps, 1.0), 1),
+        "frames_traitees":    frame_count,
+        "joueurs":            players,
+        "arbitres":           arbitres,
+        "total_passes":       sum(_passes_made.values()),
+        "possession_equipes": possession_equipes,
     }
 
     with open(stats_path, "w", encoding="utf-8") as f:
         json.dump(stats, f, indent=2, ensure_ascii=False)
 
-    print("\n" + "═" * 78)
+    print("\n" + "═" * 100)
     print(f"  STATS — {video_path}  ({round(frame_count / max(fps,1.0), 1)}s)")
-    print("═" * 78)
-    print(f"  {'Joueur':<8} {'Eq':>3} {'Vit. moy':>10} {'Vit. max':>10} {'Sprints':>8} "
-          f"{'T.sprint':>9} {'Passes':>7} {'Réussies':>10} {'Taux':>8} {'Poss.':>7}")
-    print("─" * 88)
+    print("═" * 100)
+    print(f"  {'Joueur':<8} {'Eq':>3} {'Poste':<12} {'Vit.moy':>8} {'Vit.max':>8} "
+          f"{'Dist(m)':>8} {'Sprints':>8} {'Passes':>7} {'Taux':>7} {'Poss.':>7} {'Fatigue':>8}")
+    print("─" * 100)
     for pno in sorted(int(k) for k in players):
-        p   = players[str(pno)]
-        eq  = f"E{p['equipe']}" if p['equipe'] else "  ?"
-        print(f"  P{pno:<7} {eq:>3} {p['vitesse_moyenne_kmh']:>8.1f}   {p['vitesse_max_kmh']:>8.1f}"
-              f"   {p['sprints']:>6}   {p['temps_sprint_sec']:>6.1f}s"
-              f"   {p['passes_tentees']:>5}   {p['passes_reussies']:>8}"
-              f"   {p['taux_reussite_passes']:>6.1f}%  {p['possession_pct']:>5.1f}%")
+        p      = players[str(pno)]
+        eq     = f"E{p['equipe']}" if p['equipe'] else "  ?"
+        poste  = (p['poste'] or "?")[:11]
+        fat    = f"{p['fatigue_index']:>5.1f}%" if p['fatigue_index'] is not None else "    N/A"
+        print(f"  P{pno:<7} {eq:>3} {poste:<12} {p['vitesse_moyenne_kmh']:>7.1f}  "
+              f"{p['vitesse_max_kmh']:>7.1f}  {p['distance_m']:>7.0f}  "
+              f"{p['sprints']:>7}  {p['passes_tentees']:>6}  "
+              f"{p['taux_reussite_passes']:>5.1f}%  {p['possession_pct']:>5.1f}%  {fat}")
     if arbitres:
-        print("─" * 88)
+        print("─" * 100)
         print(f"  Arbitres : {', '.join(f'P{k}' for k in sorted(int(k) for k in arbitres))}")
-    print("─" * 88)
+    print("─" * 100)
     print(f"  Total passes réussies : {stats['total_passes']}")
     if possession_equipes:
         parts = "  /  ".join(f"Équipe {k[-1]} : {v}%" for k, v in possession_equipes.items())
         print(f"  Possession — {parts}")
-    print("═" * 78)
+    print("═" * 100)
     print(f"\nStats sauvegardées : {stats_path}")
 
 
@@ -707,6 +832,20 @@ try:
             speed = min(compute_speed(f'p_{pno}', cx, cy, cam_dx, cam_dy, cam_resp, fps), 38.0)
             _player_speeds[pno].append(speed)
             players_this_frame[pno] = (cx, cy)
+
+            # Distance parcourue (déplacement corrigé mouvement caméra)
+            prev_pos = _player_prev_pos.get(pno)
+            if prev_pos is not None:
+                _player_distance[pno] += (
+                    math.hypot(cx - prev_pos[0] - cam_dx, cy - prev_pos[1] - cam_dy)
+                    / PX_PER_METER
+                )
+            _player_prev_pos[pno] = (cx, cy)
+
+            # Historique vitesse (calcul fatigue) + position terrain (sous-échantillonné)
+            _player_speed_hist[pno].append((_frame_count, speed))
+            if _frame_count % 5 == 0:
+                _player_positions[pno].append((cx, cy))
 
             was_sprinting = _sprint_active.get(pno, False)
             threshold     = SPRINT_END_THRESH if was_sprinting else SPRINT_THRESH
