@@ -1,0 +1,650 @@
+{
+  "video": "match_extrait.mp4",
+  "duree_secondes": 30.0,
+  "frames_traitees": 750,
+  "joueurs": {
+    "1": {
+      "vitesse_moyenne_kmh": 4.85,
+      "vitesse_max_kmh": 20.18,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 0,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 0.0,
+      "equipe": 1
+    },
+    "2": {
+      "vitesse_moyenne_kmh": 8.29,
+      "vitesse_max_kmh": 24.89,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 2,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 10.0,
+      "equipe": 2
+    },
+    "3": {
+      "vitesse_moyenne_kmh": 3.89,
+      "vitesse_max_kmh": 11.89,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 2,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 5.2,
+      "equipe": 2
+    },
+    "5": {
+      "vitesse_moyenne_kmh": 21.26,
+      "vitesse_max_kmh": 38.0,
+      "sprints": 4,
+      "temps_sprint_sec": 19.2,
+      "passes_tentees": 3,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 6.7,
+      "equipe": 1
+    },
+    "6": {
+      "vitesse_moyenne_kmh": 2.87,
+      "vitesse_max_kmh": 10.53,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 0,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 1.5,
+      "equipe": 2
+    },
+    "7": {
+      "vitesse_moyenne_kmh": 3.28,
+      "vitesse_max_kmh": 10.57,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 0,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 0.6,
+      "equipe": 1
+    },
+    "8": {
+      "vitesse_moyenne_kmh": 5.29,
+      "vitesse_max_kmh": 17.12,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 0,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 0.3,
+      "equipe": 1
+    },
+    "9": {
+      "vitesse_moyenne_kmh": 6.99,
+      "vitesse_max_kmh": 22.2,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 1,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 5.8,
+      "equipe": 2
+    },
+    "10": {
+      "vitesse_moyenne_kmh": 5.34,
+      "vitesse_max_kmh": 15.53,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 1,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 10.3,
+      "equipe": 2
+    },
+    "12": {
+      "vitesse_moyenne_kmh": 6.0,
+      "vitesse_max_kmh": 27.79,
+      "sprints": 3,
+      "temps_sprint_sec": 0.4,
+      "passes_tentees": 0,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 1.5,
+      "equipe": 2
+    },
+    "13": {
+      "vitesse_moyenne_kmh": 3.96,
+      "vitesse_max_kmh": 11.01,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 0,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 0.6,
+      "equipe": 2
+    },
+    "14": {
+      "vitesse_moyenne_kmh": 5.11,
+      "vitesse_max_kmh": 16.29,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 0,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 1.2,
+      "equipe": 1
+    },
+    "16": {
+      "vitesse_moyenne_kmh": 5.32,
+      "vitesse_max_kmh": 11.68,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 0,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 1.2,
+      "equipe": 2
+    },
+    "17": {
+      "vitesse_moyenne_kmh": 6.44,
+      "vitesse_max_kmh": 38.0,
+      "sprints": 2,
+      "temps_sprint_sec": 1.9,
+      "passes_tentees": 0,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 0.0,
+      "equipe": 1
+    },
+    "18": {
+      "vitesse_moyenne_kmh": 4.61,
+      "vitesse_max_kmh": 16.12,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 2,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 0.9,
+      "equipe": 2
+    },
+    "19": {
+      "vitesse_moyenne_kmh": 1.96,
+      "vitesse_max_kmh": 4.69,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 0,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 0.0,
+      "equipe": 1
+    },
+    "20": {
+      "vitesse_moyenne_kmh": 3.76,
+      "vitesse_max_kmh": 10.41,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 0,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 1.2,
+      "equipe": 2
+    },
+    "21": {
+      "vitesse_moyenne_kmh": 2.71,
+      "vitesse_max_kmh": 8.53,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 0,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 0.0,
+      "equipe": 2
+    },
+    "22": {
+      "vitesse_moyenne_kmh": 6.8,
+      "vitesse_max_kmh": 24.33,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 0,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 0.0,
+      "equipe": 1
+    },
+    "25": {
+      "vitesse_moyenne_kmh": 0.58,
+      "vitesse_max_kmh": 1.14,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 0,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 0.0,
+      "equipe": 2
+    },
+    "26": {
+      "vitesse_moyenne_kmh": 4.86,
+      "vitesse_max_kmh": 15.11,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 0,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 0.6,
+      "equipe": 1
+    },
+    "28": {
+      "vitesse_moyenne_kmh": 1.11,
+      "vitesse_max_kmh": 2.03,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 0,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 0.0,
+      "equipe": null
+    },
+    "31": {
+      "vitesse_moyenne_kmh": 0.55,
+      "vitesse_max_kmh": 0.93,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 0,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 0.0,
+      "equipe": 2
+    },
+    "32": {
+      "vitesse_moyenne_kmh": 3.46,
+      "vitesse_max_kmh": 9.26,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 1,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 0.0,
+      "equipe": 1
+    },
+    "33": {
+      "vitesse_moyenne_kmh": 2.29,
+      "vitesse_max_kmh": 4.52,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 0,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 0.0,
+      "equipe": 2
+    },
+    "34": {
+      "vitesse_moyenne_kmh": 0.04,
+      "vitesse_max_kmh": 0.08,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 0,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 0.0,
+      "equipe": null
+    },
+    "35": {
+      "vitesse_moyenne_kmh": 2.39,
+      "vitesse_max_kmh": 4.51,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 0,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 0.0,
+      "equipe": 2
+    },
+    "36": {
+      "vitesse_moyenne_kmh": 9.66,
+      "vitesse_max_kmh": 15.57,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 0,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 0.0,
+      "equipe": 1
+    },
+    "37": {
+      "vitesse_moyenne_kmh": 4.88,
+      "vitesse_max_kmh": 10.09,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 0,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 0.0,
+      "equipe": null
+    },
+    "38": {
+      "vitesse_moyenne_kmh": 7.31,
+      "vitesse_max_kmh": 22.66,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 1,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 0.9,
+      "equipe": 2
+    },
+    "39": {
+      "vitesse_moyenne_kmh": 12.08,
+      "vitesse_max_kmh": 38.0,
+      "sprints": 13,
+      "temps_sprint_sec": 6.2,
+      "passes_tentees": 0,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 0.0,
+      "equipe": 1
+    },
+    "41": {
+      "vitesse_moyenne_kmh": 5.71,
+      "vitesse_max_kmh": 13.76,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 0,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 0.0,
+      "equipe": 2
+    },
+    "44": {
+      "vitesse_moyenne_kmh": 0.11,
+      "vitesse_max_kmh": 0.22,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 0,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 0.0,
+      "equipe": null
+    },
+    "45": {
+      "vitesse_moyenne_kmh": 0.0,
+      "vitesse_max_kmh": 0.0,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 0,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 0.0,
+      "equipe": null
+    },
+    "46": {
+      "vitesse_moyenne_kmh": 3.18,
+      "vitesse_max_kmh": 6.3,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 0,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 0.0,
+      "equipe": 1
+    },
+    "47": {
+      "vitesse_moyenne_kmh": 4.99,
+      "vitesse_max_kmh": 11.27,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 1,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 3.9,
+      "equipe": 1
+    },
+    "48": {
+      "vitesse_moyenne_kmh": 2.21,
+      "vitesse_max_kmh": 4.42,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 0,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 0.0,
+      "equipe": null
+    },
+    "49": {
+      "vitesse_moyenne_kmh": 5.09,
+      "vitesse_max_kmh": 11.03,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 0,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 0.9,
+      "equipe": 2
+    },
+    "50": {
+      "vitesse_moyenne_kmh": 7.04,
+      "vitesse_max_kmh": 18.63,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 0,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 0.0,
+      "equipe": 1
+    },
+    "52": {
+      "vitesse_moyenne_kmh": 1.46,
+      "vitesse_max_kmh": 7.04,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 0,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 0.0,
+      "equipe": 2
+    },
+    "53": {
+      "vitesse_moyenne_kmh": 7.01,
+      "vitesse_max_kmh": 15.16,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 0,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 0.0,
+      "equipe": 2
+    },
+    "54": {
+      "vitesse_moyenne_kmh": 0.0,
+      "vitesse_max_kmh": 0.0,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 0,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 0.0,
+      "equipe": null
+    },
+    "55": {
+      "vitesse_moyenne_kmh": 4.06,
+      "vitesse_max_kmh": 10.31,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 2,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 2.7,
+      "equipe": 2
+    },
+    "57": {
+      "vitesse_moyenne_kmh": 5.73,
+      "vitesse_max_kmh": 38.0,
+      "sprints": 1,
+      "temps_sprint_sec": 0.3,
+      "passes_tentees": 0,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 0.0,
+      "equipe": 2
+    },
+    "58": {
+      "vitesse_moyenne_kmh": 1.99,
+      "vitesse_max_kmh": 3.28,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 0,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 0.0,
+      "equipe": 2
+    },
+    "60": {
+      "vitesse_moyenne_kmh": 1.97,
+      "vitesse_max_kmh": 3.94,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 0,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 0.0,
+      "equipe": 1
+    },
+    "61": {
+      "vitesse_moyenne_kmh": 0.0,
+      "vitesse_max_kmh": 0.0,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 0,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 0.0,
+      "equipe": null
+    },
+    "62": {
+      "vitesse_moyenne_kmh": 0.0,
+      "vitesse_max_kmh": 0.0,
+      "sprints": 0,
+      "temps_sprint_sec": 0.0,
+      "passes_tentees": 0,
+      "passes_reussies": 0,
+      "passes_recues": 0,
+      "taux_reussite_passes": 0.0,
+      "possession_pct": 0.0,
+      "equipe": null
+    }
+  },
+  "arbitres": {
+    "4": {
+      "vitesse_moyenne_kmh": 2.56,
+      "vitesse_max_kmh": 12.27
+    },
+    "11": {
+      "vitesse_moyenne_kmh": 1.72,
+      "vitesse_max_kmh": 8.38
+    },
+    "15": {
+      "vitesse_moyenne_kmh": 4.21,
+      "vitesse_max_kmh": 11.59
+    },
+    "23": {
+      "vitesse_moyenne_kmh": 1.46,
+      "vitesse_max_kmh": 6.3
+    },
+    "24": {
+      "vitesse_moyenne_kmh": 2.39,
+      "vitesse_max_kmh": 8.58
+    },
+    "27": {
+      "vitesse_moyenne_kmh": 2.04,
+      "vitesse_max_kmh": 10.9
+    },
+    "29": {
+      "vitesse_moyenne_kmh": 3.46,
+      "vitesse_max_kmh": 19.3
+    },
+    "30": {
+      "vitesse_moyenne_kmh": 1.8,
+      "vitesse_max_kmh": 11.24
+    },
+    "40": {
+      "vitesse_moyenne_kmh": 3.28,
+      "vitesse_max_kmh": 12.84
+    },
+    "42": {
+      "vitesse_moyenne_kmh": 0.64,
+      "vitesse_max_kmh": 3.91
+    },
+    "43": {
+      "vitesse_moyenne_kmh": 6.22,
+      "vitesse_max_kmh": 20.18
+    },
+    "51": {
+      "vitesse_moyenne_kmh": 2.16,
+      "vitesse_max_kmh": 5.27
+    },
+    "56": {
+      "vitesse_moyenne_kmh": 2.09,
+      "vitesse_max_kmh": 4.85
+    },
+    "59": {
+      "vitesse_moyenne_kmh": 1.45,
+      "vitesse_max_kmh": 2.47
+    },
+    "63": {
+      "vitesse_moyenne_kmh": 1.91,
+      "vitesse_max_kmh": 3.15
+    }
+  },
+  "total_passes": 0,
+  "possession_equipes": {
+    "equipe_1": 13.3,
+    "equipe_2": 42.7
+  }
+}
