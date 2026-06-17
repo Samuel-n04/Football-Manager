@@ -1,0 +1,26 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Modèles lourds (télécharger séparément)
+*.pt
+*.pth
+*.onnx
+
+# Outputs générés
+output_videos/output_video.avi
+
+# Environnements virtuels
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,111 @@
+======================================================================
+  RAPPORT DE MATCH — 2026-06-16 16:16
+======================================================================
+
+  Match : Équipe A vs Équipe B — Score : +0. 39 joueurs analysés. Performance moyenne : 32.5/100. Fatigue moyenne : 11.0/100.
+
+
+  MEILLEURES PERFORMANCES
+----------------------------------------------------------------------
+  • {'PlayerID': 1, 'PerformanceScore': 32.5, 'FatigueScore': 21.5}
+  • {'PlayerID': 3, 'PerformanceScore': 32.5, 'FatigueScore': 29.9}
+  • {'PlayerID': 4, 'PerformanceScore': 32.5, 'FatigueScore': 0.1}
+
+  SOUS-PERFORMANCES
+----------------------------------------------------------------------
+  • {'PlayerID': 1, 'PerformanceScore': 32.5, 'FatigueScore': 21.5, 'InjuryRisk': 'Faible'}
+  • {'PlayerID': 3, 'PerformanceScore': 32.5, 'FatigueScore': 29.9, 'InjuryRisk': 'Faible'}
+  • {'PlayerID': 4, 'PerformanceScore': 32.5, 'FatigueScore': 0.1, 'InjuryRisk': 'Faible'}
+  • {'PlayerID': 5, 'PerformanceScore': 32.5, 'FatigueScore': 22.9, 'InjuryRisk': 'Faible'}
+  • {'PlayerID': 6, 'PerformanceScore': 32.5, 'FatigueScore': 8.9, 'InjuryRisk': 'Faible'}
+  • {'PlayerID': 7, 'PerformanceScore': 32.5, 'FatigueScore': 15.2, 'InjuryRisk': 'Faible'}
+  • {'PlayerID': 8, 'PerformanceScore': 32.5, 'FatigueScore': 22.6, 'InjuryRisk': 'Faible'}
+  • {'PlayerID': 9, 'PerformanceScore': 32.5, 'FatigueScore': 0.1, 'InjuryRisk': 'Faible'}
+  • {'PlayerID': 10, 'PerformanceScore': 32.5, 'FatigueScore': 0.1, 'InjuryRisk': 'Faible'}
+  • {'PlayerID': 11, 'PerformanceScore': 32.5, 'FatigueScore': 25.2, 'InjuryRisk': 'Faible'}
+  • {'PlayerID': 12, 'PerformanceScore': 32.5, 'FatigueScore': 36.5, 'InjuryRisk': 'Moyen'}
+  • {'PlayerID': 13, 'PerformanceScore': 32.5, 'FatigueScore': 0.1, 'InjuryRisk': 'Faible'}
+  • {'PlayerID': 14, 'PerformanceScore': 32.5, 'FatigueScore': 22.2, 'InjuryRisk': 'Faible'}
+  • {'PlayerID': 15, 'PerformanceScore': 32.5, 'FatigueScore': 21.2, 'InjuryRisk': 'Faible'}
+  • {'PlayerID': 16, 'PerformanceScore': 32.5, 'FatigueScore': 39.1, 'InjuryRisk': 'Faible'}
+  • {'PlayerID': 18, 'PerformanceScore': 32.5, 'FatigueScore': 12.7, 'InjuryRisk': 'Faible'}
+  • {'PlayerID': 19, 'PerformanceScore': 32.5, 'FatigueScore': 15.0, 'InjuryRisk': 'Faible'}
+  • {'PlayerID': 20, 'PerformanceScore': 32.5, 'FatigueScore': 0.1, 'InjuryRisk': 'Faible'}
+  • {'PlayerID': 22, 'PerformanceScore': 32.5, 'FatigueScore': 14.0, 'InjuryRisk': 'Faible'}
+  • {'PlayerID': 26, 'PerformanceScore': 32.5, 'FatigueScore': 0.1, 'InjuryRisk': 'Faible'}
+  • {'PlayerID': 28, 'PerformanceScore': 32.5, 'FatigueScore': 0.1, 'InjuryRisk': 'Faible'}
+  • {'PlayerID': 34, 'PerformanceScore': 32.5, 'FatigueScore': 19.2, 'InjuryRisk': 'Faible'}
+  • {'PlayerID': 81, 'PerformanceScore': 32.5, 'FatigueScore': 0.1, 'InjuryRisk': 'Faible'}
+  • {'PlayerID': 91, 'PerformanceScore': 32.5, 'FatigueScore': 4.8, 'InjuryRisk': 'Faible'}
+  • {'PlayerID': 117, 'PerformanceScore': 32.5, 'FatigueScore': 0.1, 'InjuryRisk': 'Faible'}
+  • {'PlayerID': 120, 'PerformanceScore': 32.5, 'FatigueScore': 17.5, 'InjuryRisk': 'Faible'}
+  • {'PlayerID': 132, 'PerformanceScore': 32.5, 'FatigueScore': 38.0, 'InjuryRisk': 'Faible'}
+  • {'PlayerID': 134, 'PerformanceScore': 32.5, 'FatigueScore': 0.1, 'InjuryRisk': 'Faible'}
+  • {'PlayerID': 142, 'PerformanceScore': 32.5, 'FatigueScore': 30.1, 'InjuryRisk': 'Faible'}
+  • {'PlayerID': 156, 'PerformanceScore': 32.5, 'FatigueScore': 6.8, 'InjuryRisk': 'Faible'}
+  • {'PlayerID': 197, 'PerformanceScore': 32.5, 'FatigueScore': 0.1, 'InjuryRisk': 'Faible'}
+  • {'PlayerID': 213, 'PerformanceScore': 32.5, 'FatigueScore': 0.1, 'InjuryRisk': 'Faible'}
+  • {'PlayerID': 227, 'PerformanceScore': 32.5, 'FatigueScore': 0.1, 'InjuryRisk': 'Faible'}
+  • {'PlayerID': 236, 'PerformanceScore': 32.5, 'FatigueScore': 2.8, 'InjuryRisk': 'Faible'}
+  • {'PlayerID': 243, 'PerformanceScore': 32.5, 'FatigueScore': 0.1, 'InjuryRisk': 'Faible'}
+  • {'PlayerID': 247, 'PerformanceScore': 32.5, 'FatigueScore': 0.1, 'InjuryRisk': 'Faible'}
+  • {'PlayerID': 252, 'PerformanceScore': 32.5, 'FatigueScore': 0.1, 'InjuryRisk': 'Faible'}
+  • {'PlayerID': 259, 'PerformanceScore': 32.5, 'FatigueScore': 0.1, 'InjuryRisk': 'Faible'}
+  • {'PlayerID': 270, 'PerformanceScore': 32.5, 'FatigueScore': 0.1, 'InjuryRisk': 'Faible'}
+
+  BILAN FATIGUE
+----------------------------------------------------------------------
+  avg_fatigue: 11.0
+  max_fatigue: 39.1
+  players_above_70: 0
+  most_fatigued_player: 16
+
+  RISQUES DE BLESSURE
+----------------------------------------------------------------------
+  Faible: 38
+  Moyen: 1
+  Eleve: 0
+  high_risk_players: []
+
+  DÉCISIONS DE REMPLACEMENT
+----------------------------------------------------------------------
+  • {'sortant': 'Joueur #3 (CM)', 'entrant': 'Joueur #5 (CM)', 'urgence': 'HAUTE', 'explication': 'Remplacer Joueur #3 (position : CM) — performance = 32. Faire entrer Joueur #5 (fraîcheur physique : 44%).', 'score_compatibilite': 66.1}
+  • {'sortant': 'Joueur #8 (CAM)', 'entrant': 'Joueur #1 (RW)', 'urgence': 'HAUTE', 'explication': 'Remplacer Joueur #8 (position : CAM) — performance = 32. Faire entrer Joueur #1 (fraîcheur physique : 56%).', 'score_compatibilite': 69.7}
+  • {'sortant': 'Joueur #14 (CB)', 'entrant': 'Joueur #9 (LW)', 'urgence': 'HAUTE', 'explication': 'Remplacer Joueur #14 (position : CB) — performance = 32. Faire entrer Joueur #9 (fraîcheur physique : 38%).', 'score_compatibilite': 52.6}
+
+  TACTIQUE RECOMMANDÉE
+----------------------------------------------------------------------
+  formation_recommandee: 4-3-3
+  score_global: 51.8
+  possession_estimee: 60.4%
+  xG_estime: 1.75
+  risque_defensif: 36.2
+  description: Formation offensive équilibrée. Bon pressing, ailiers rapides.
+
+  ANALYSE ADVERSE
+----------------------------------------------------------------------
+  resume: 7 joueur(s) adverses en sous-performance. 47.9% des occasions concédées côté right. 6 faille(s) défensive(s) identifiée(s).
+  zone_vulnerable: right
+  joueurs_faibles: 7
+  failles_defensives: 6
+  recommandations: ["Exploiter le côté right — zone la plus vulnérable de l'adversaire.", 'Cibler la position RB (joueur #9) qui présente la plus grande faille défensive (score 78/100).', 'Augmenter le pressing haut dans les 20 dernières minutes pour profiter de la fatigue adverse.']
+
+  ERREURS TACTIQUES
+----------------------------------------------------------------------
+  • Plusieurs joueurs en sous-performance critique non remplacés.
+
+  REINFORCEMENT LEARNING
+----------------------------------------------------------------------
+  episodes_trained: 2000
+  win_rate: 37.0
+  draw_rate: 47.0
+  loss_rate: 16.0
+  avg_reward_last_200: 4.254
+  final_epsilon: 0.05
+  most_chosen_action: substitute
+
+  CONCLUSION
+----------------------------------------------------------------------
+  Performance collective : 32.5/100. L'agent RL recommande principalement l'action « substitute » avec un taux de victoire simulé de 37.0%. Appliquer ces recommandations lors des prochains matchs.
+
+======================================================================
