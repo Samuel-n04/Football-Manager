@@ -51,14 +51,14 @@ _player_appearances = {} # pno → feature vector (np.ndarray, normalisé)
 _next_player_no   = 1
 
 REID_MAX_FRAMES  = 120   # ~4 s à 30 fps
-REID_MAX_DIST    = 180   # pixels : distance max position (prédite) pour accepter un match
+REID_MAX_DIST    = 150   # pixels : distance max position (prédite) pour accepter un match
 REID_POS_WEIGHT  = 0.30  # poids position dans le coût
 REID_APP_WEIGHT  = 0.70  # poids apparence dans le coût
-REID_MAX_COST    = 0.48  # coût max pour accepter un réassignement (sinon nouveau joueur)
+REID_MAX_COST    = 0.40  # coût max pour accepter un réassignement (sinon nouveau joueur)
 JERSEY_MAX_HIST  = 150   # cap sur l'historique couleur maillot
 
 # Détection de switch interne du tracker (même tid → joueur différent)
-TRACKER_SWITCH_MAX_DIST = 160  # pixels : saut max toléré pour un tid déjà connu
+TRACKER_SWITCH_MAX_DIST = 120  # pixels : saut max toléré pour un tid déjà connu
 TRACKER_SWITCH_APP_MIN  = 0.30 # similarité apparence minimale pour garder un tid connu
 
 # ── Stats par joueur ──────────────────────────────────────────────────────────
@@ -76,10 +76,11 @@ _sprint_count  = defaultdict(int)
 _sprint_frames = defaultdict(int)
 
 # ── Distance + Fatigue + Position ─────────────────────────────────────────────
-_player_distance   = defaultdict(float)   # pno → mètres parcourus (corrigé caméra)
-_player_speed_hist = defaultdict(list)    # pno → [(frame, speed_kmh), ...]
-_player_positions  = defaultdict(list)    # pno → [(cx, cy), ...] (sous-échantillonné)
-_player_prev_pos   = {}                   # pno → (cx, cy) frame précédente (pixels bruts)
+_player_distance    = defaultdict(float)   # pno → mètres parcourus (corrigé caméra)
+_player_speed_hist  = defaultdict(list)    # pno → [(frame, speed_kmh), ...]
+_player_positions   = defaultdict(list)    # pno → [(cx, cy), ...] (sous-échantillonné)
+_player_prev_pos    = {}                   # pno → (cx, cy) frame précédente (pixels bruts)
+_player_frame_count = defaultdict(int)     # pno → nombre de frames de présence effective
 
 # ── Possession ────────────────────────────────────────────────────────────────
 POSSESSION_MAX_DIST  = 80          # pixels : distance max pour attribuer la possession
@@ -96,18 +97,21 @@ REF_UPDATE_INTERVAL = 15
 SAME_TEAM_COLOR_DIST = 32.0
 
 # ── Détection de passes ───────────────────────────────────────────────────────
-PASS_KICK_THRESH   = 18.0
-PASS_ARRIVE_THRESH = 8.0
-BALL_PROX_PX       = 90
+PASS_KICK_THRESH      = 12.0
+PASS_ARRIVE_THRESH    = 8.0
+BALL_PROX_PX          = 110
+PASS_MAX_FLIGHT_FRAMES = 90   # ~3 s : timeout si la balle n'arrive pas
 
-_pass_state    = "idle"
-_pass_from_pno = None
-_last_ball_spd = 0.0
+_pass_state           = "idle"
+_pass_from_pno        = None
+_last_ball_spd        = 0.0
+_pass_in_flight_since = None
 
 # ── Masque terrain ────────────────────────────────────────────────────────────
 _field_mask_cache = None
 _field_mask_frame = -1
-FIELD_MASK_REFRESH = 5
+FIELD_MASK_REFRESH  = 5
+MIN_PLAYER_FRAMES   = 15   # frames minimum pour apparaître dans les stats
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -396,13 +400,18 @@ def update_referee_detection():
                         dtype=np.float32)
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 50, 0.2)
     _, labels, _ = cv2.kmeans(features, 3, None, criteria, 10, cv2.KMEANS_PP_CENTERS)
-    labels    = labels.flatten()
-    counts    = [int(np.sum(labels == i)) for i in range(3)]
-    ref_cls   = int(np.argmin(counts))
-    team_cls  = [i for i in range(3) if i != ref_cls]   # les 2 clusters restants = équipes
+    labels   = labels.flatten()
+    counts   = [int(np.sum(labels == i)) for i in range(3)]
+    ref_cls  = int(np.argmin(counts))
+    team_cls = [i for i in range(3) if i != ref_cls]
+
+    # Le cluster arbitre ne doit pas dépasser 20 % des joueurs détectés :
+    # au-delà, le k-means confond une équipe avec des arbitres.
+    ref_valid = (counts[ref_cls] / max(sum(counts), 1)) <= 0.20
+
     for pno, lbl in zip(pnos, labels):
         lbl = int(lbl)
-        if lbl == ref_cls:
+        if ref_valid and lbl == ref_cls:
             _is_referee[pno]  = True
             _player_team[pno] = None
         else:
@@ -450,22 +459,29 @@ def closest_player_to_ball(bcx, bcy, players):
 
 
 def update_pass_detection(ball_speed, bcx, bcy, players_this_frame):
-    global _pass_state, _pass_from_pno, _last_ball_spd
+    global _pass_state, _pass_from_pno, _last_ball_spd, _pass_in_flight_since
     near_pno, near_dist = closest_player_to_ball(bcx, bcy, players_this_frame)
     if _pass_state == "idle":
         if ball_speed >= PASS_KICK_THRESH and _last_ball_spd < PASS_KICK_THRESH:
             if near_dist <= BALL_PROX_PX and near_pno is not None:
-                _pass_from_pno = near_pno
-                _pass_state    = "in_flight"
+                _pass_from_pno        = near_pno
+                _pass_state           = "in_flight"
+                _pass_in_flight_since = _frame_count
                 _passes_attempted[near_pno] += 1
     elif _pass_state == "in_flight":
-        if ball_speed <= PASS_ARRIVE_THRESH:
+        # Timeout : si la balle n'arrive pas dans le délai imparti, annuler
+        if _frame_count - (_pass_in_flight_since or _frame_count) > PASS_MAX_FLIGHT_FRAMES:
+            _pass_state           = "idle"
+            _pass_from_pno        = None
+            _pass_in_flight_since = None
+        elif ball_speed <= PASS_ARRIVE_THRESH:
             if near_dist <= BALL_PROX_PX and near_pno is not None and near_pno != _pass_from_pno:
                 if same_team(_pass_from_pno, near_pno, players_this_frame):
                     _passes_made[_pass_from_pno] += 1
                     _passes_received[near_pno]   += 1
-            _pass_state    = "idle"
-            _pass_from_pno = None
+            _pass_state           = "idle"
+            _pass_from_pno        = None
+            _pass_in_flight_since = None
     _last_ball_spd = ball_speed
 
 
@@ -629,14 +645,18 @@ def _estimate_poste(pno, avg_pos, std_x_all):
 
 
 def save_stats(video_path, stats_path, fps, frame_count):
-    all_pnos = (set(_player_speeds.keys())
-                | set(_passes_attempted.keys())
-                | set(_passes_received.keys())
-                | set(_possession_frames.keys()))
+    # Filtre : exclure les joueurs fantômes (présents < MIN_PLAYER_FRAMES frames)
+    all_pnos = {pno for pno in (set(_player_speeds.keys())
+                                | set(_passes_attempted.keys())
+                                | set(_passes_received.keys())
+                                | set(_possession_frames.keys()))
+                if _player_frame_count.get(pno, 0) >= MIN_PLAYER_FRAMES}
+
     players  = {}
     arbitres = {}
 
     total_possession = max(sum(_possession_frames.values()), 1)
+    duration_sec     = frame_count / max(fps, 1.0)
 
     # Pré-calcul position moyenne et std-x (pour estimation des postes)
     avg_pos = {}
@@ -663,6 +683,14 @@ def save_stats(video_path, stats_path, fps, frame_count):
         fatigue     = _fatigue_index(pno)
         poste       = _estimate_poste(pno, avg_pos, std_x_all)
 
+        # Score final [0-100] : vitesse(40) + passes(30) + distance(30)
+        expected_dist = max(duration_sec * 3.0, 1.0)   # distance attendue pour ce clip
+        sp_pts  = min(vitesse_moy / 12.0, 1.0) * 40.0
+        pp_pts  = (rate / 100.0 * 30.0) if attempted > 0 else 15.0
+        dp_pts  = min(distance_m / expected_dist, 1.0) * 30.0
+        score   = round(sp_pts + pp_pts + dp_pts, 1)
+        underperf = score < 35
+
         if _is_referee.get(pno):
             arbitres[str(pno)] = {
                 "vitesse_moyenne_kmh": vitesse_moy,
@@ -674,6 +702,8 @@ def save_stats(video_path, stats_path, fps, frame_count):
                 "player_id":            pno,
                 "equipe":               _player_team.get(pno),
                 "poste":                poste,
+                "score":                score,
+                "sous_performance":     underperf,
                 "vitesse_moyenne_kmh":  vitesse_moy,
                 "vitesse_max_kmh":      vitesse_max,
                 "distance_m":           distance_m,
@@ -686,6 +716,11 @@ def save_stats(video_path, stats_path, fps, frame_count):
                 "possession_pct":       poss_pct,
                 "fatigue_index":        fatigue,
             }
+
+    # Classement par score décroissant (rang 1 = meilleur)
+    sorted_pnos = sorted(players, key=lambda k: players[k]["score"], reverse=True)
+    for rank, k in enumerate(sorted_pnos, start=1):
+        players[k]["classement"] = rank
 
     # Possession par équipe
     team_poss = defaultdict(int)
@@ -700,7 +735,7 @@ def save_stats(video_path, stats_path, fps, frame_count):
 
     stats = {
         "video":              video_path,
-        "duree_secondes":     round(frame_count / max(fps, 1.0), 1),
+        "duree_secondes":     round(duration_sec, 1),
         "frames_traitees":    frame_count,
         "joueurs":            players,
         "arbitres":           arbitres,
@@ -711,30 +746,38 @@ def save_stats(video_path, stats_path, fps, frame_count):
     with open(stats_path, "w", encoding="utf-8") as f:
         json.dump(stats, f, indent=2, ensure_ascii=False)
 
-    print("\n" + "═" * 100)
-    print(f"  STATS — {video_path}  ({round(frame_count / max(fps,1.0), 1)}s)")
-    print("═" * 100)
-    print(f"  {'Joueur':<8} {'Eq':>3} {'Poste':<12} {'Vit.moy':>8} {'Vit.max':>8} "
-          f"{'Dist(m)':>8} {'Sprints':>8} {'Passes':>7} {'Taux':>7} {'Poss.':>7} {'Fatigue':>8}")
-    print("─" * 100)
-    for pno in sorted(int(k) for k in players):
-        p      = players[str(pno)]
+    print("\n" + "═" * 110)
+    print(f"  STATS — {video_path}  ({round(duration_sec, 1)}s)")
+    print("═" * 110)
+    print(f"  {'#':<4} {'Joueur':<8} {'Eq':>3} {'Poste':<12} {'Score':>6} {'Vit.moy':>8} "
+          f"{'Vit.max':>8} {'Dist(m)':>8} {'Spr':>5} {'P.tent':>7} {'P.réus':>7} "
+          f"{'Taux':>7} {'Poss.':>7} {'Fatigue':>8}")
+    print("─" * 110)
+    for k in sorted_pnos:
+        p      = players[k]
+        pno    = p["player_id"]
         eq     = f"E{p['equipe']}" if p['equipe'] else "  ?"
         poste  = (p['poste'] or "?")[:11]
         fat    = f"{p['fatigue_index']:>5.1f}%" if p['fatigue_index'] is not None else "    N/A"
-        print(f"  P{pno:<7} {eq:>3} {poste:<12} {p['vitesse_moyenne_kmh']:>7.1f}  "
-              f"{p['vitesse_max_kmh']:>7.1f}  {p['distance_m']:>7.0f}  "
-              f"{p['sprints']:>7}  {p['passes_tentees']:>6}  "
-              f"{p['taux_reussite_passes']:>5.1f}%  {p['possession_pct']:>5.1f}%  {fat}")
+        flag   = " !" if p['sous_performance'] else "  "
+        print(f"  {p['classement']:<3}{flag} P{pno:<6} {eq:>3} {poste:<12} {p['score']:>5.1f}  "
+              f"{p['vitesse_moyenne_kmh']:>7.1f}  {p['vitesse_max_kmh']:>7.1f}  "
+              f"{p['distance_m']:>7.0f}  {p['sprints']:>4}  {p['passes_tentees']:>6}  "
+              f"{p['passes_reussies']:>6}  {p['taux_reussite_passes']:>5.1f}%  "
+              f"{p['possession_pct']:>5.1f}%  {fat}")
     if arbitres:
-        print("─" * 100)
+        print("─" * 110)
         print(f"  Arbitres : {', '.join(f'P{k}' for k in sorted(int(k) for k in arbitres))}")
-    print("─" * 100)
+    print("─" * 110)
     print(f"  Total passes réussies : {stats['total_passes']}")
     if possession_equipes:
         parts = "  /  ".join(f"Équipe {k[-1]} : {v}%" for k, v in possession_equipes.items())
         print(f"  Possession — {parts}")
-    print("═" * 100)
+    # Joueurs en sous-performance
+    sp_list = [f"P{p['player_id']}" for p in players.values() if p['sous_performance']]
+    if sp_list:
+        print(f"  Sous-performance (!) : {', '.join(sp_list)}")
+    print("═" * 110)
     print(f"\nStats sauvegardées : {stats_path}")
 
 
@@ -831,6 +874,7 @@ try:
             color = player_color(pno)
             speed = min(compute_speed(f'p_{pno}', cx, cy, cam_dx, cam_dy, cam_resp, fps), 38.0)
             _player_speeds[pno].append(speed)
+            _player_frame_count[pno] += 1
             players_this_frame[pno] = (cx, cy)
 
             # Distance parcourue (déplacement corrigé mouvement caméra)
@@ -856,9 +900,23 @@ try:
             if is_sprinting:
                 _sprint_frames[pno] += 1
 
-            suffix    = " Arb" if _is_referee.get(pno) else (" SPR" if is_sprinting else "")
-            thickness = 3 if is_sprinting else 2
-            draw_label(display, xyxy, f'P{pno}{suffix} {int(round(speed))}km/h', color, thickness)
+            # Score live [0-100] = vitesse(40) + passes(30) + distance(30)
+            _att      = _passes_attempted[pno]
+            _score    = (min(speed / 15.0, 1.0) * 40.0
+                         + ((_passes_made[pno] / _att * 30.0) if _att > 0 else 15.0)
+                         + min(_player_distance[pno] / 80.0, 1.0) * 30.0)
+
+            underperf = (_score < 35 and _player_frame_count[pno] >= 50
+                         and not _is_referee.get(pno))
+
+            suffix      = " Arb" if _is_referee.get(pno) else (" SPR" if is_sprinting else "")
+            perf_suffix = " !SP" if underperf else ""
+            passes_lbl  = f" {_passes_made[pno]}/{_passes_attempted[pno]}p"
+            # Couleur individuelle toujours conservée ; box plus épaisse si sous-perf ou sprint
+            thickness   = 4 if underperf else (3 if is_sprinting else 2)
+            draw_label(display, xyxy,
+                       f'P{pno} {int(_score)}{suffix} {int(round(speed))}k{passes_lbl}{perf_suffix}',
+                       color, thickness)
 
         # ── Traitement ballon ─────────────────────────────────────────────────
         if ball_dets:
@@ -888,6 +946,13 @@ try:
             near_pno, near_dist = closest_player_to_ball(ball_cx, ball_cy, players_this_frame)
             if near_pno is not None and near_dist <= POSSESSION_MAX_DIST:
                 _possession_frames[near_pno] += 1
+
+        # Timeout passe en vol : déclencher même si la balle est absente ce frame
+        if (_pass_state == "in_flight" and _pass_in_flight_since is not None
+                and _frame_count - _pass_in_flight_since > PASS_MAX_FLIGHT_FRAMES):
+            _pass_state           = "idle"
+            _pass_from_pno        = None
+            _pass_in_flight_since = None
 
         if ball_cx is not None and players_this_frame:
             update_pass_detection(ball_speed, ball_cx, ball_cy, players_this_frame)
