@@ -13,10 +13,10 @@ from scipy.optimize import linear_sum_assignment
 from ultralytics import YOLO
 
 # ── Vidéo en argument ou valeur par défaut ────────────────────────────────────
-VIDEO_PATH  = sys.argv[1] if len(sys.argv) > 1 else "match_extrait.mp4"
-base        = VIDEO_PATH.rsplit(".", 1)[0]
-OUTPUT_PATH = base + "_tracking.mp4"
-STATS_PATH  = base + "_stats.json"
+VIDEO_PATH  = sys.argv[1] if len(sys.argv) > 1 else os.path.join("input_videos", "match_extrait.mp4")
+_base_name  = os.path.splitext(os.path.basename(VIDEO_PATH))[0]
+OUTPUT_PATH = os.path.join("output_videos", _base_name + "_tracking.mp4")
+STATS_PATH  = os.path.join("output_videos", _base_name + "_stats.json")
 
 MODEL_PATH  = "yolov8m.pt"
 TRACKER_CFG = "bytetrack.yaml"

@@ -1,13 +1,20 @@
 # Environnement virtuel
 foot_env/
+venv/
 
+# Modèles YOLO (gros fichiers)
+*.pt
+
+# Vidéos
+input_videos/
+output_videos/
 
 # Fichiers mis en cache par Python
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-*.mp4
+
 # Dossiers de distribution / packages
 build/
 develop-eggs/
