@@ -233,7 +233,7 @@ try:
 
         writer.write(display)
 
-        if state.frame_count % 100 == 0:
+        if state.frame_count % 5 == 0:
             pct = state.frame_count / max(total_frames, 1) * 100
             print(f"  {state.frame_count}/{total_frames} frames ({pct:.1f}%)")
 

@@ -58,7 +58,9 @@ def players_df(stats: dict) -> pd.DataFrame:
             "Sous-perf.":      p["sous_performance"],
             "_team":           p["equipe"],
         })
-    df = pd.DataFrame(rows).sort_values("Rang")
+    df = pd.DataFrame(rows)
+    if not df.empty:
+        df = df.sort_values("Rang")
     return df
 
 
@@ -238,26 +240,30 @@ with tab_players:
     )
     show_underperf = c3.checkbox("Sous-performances uniquement", value=False)
 
-    mask = df["Équipe"].isin(team_filter) & df["Poste"].isin(poste_filter)
-    if show_underperf:
-        mask &= df["Sous-perf."]
-    filtered = df[mask]
+    if df.empty:
+        filtered = df
+    else:
+        mask = df["Équipe"].isin(team_filter) & df["Poste"].isin(poste_filter)
+        if show_underperf:
+            mask &= df["Sous-perf."]
+        filtered = df[mask]
 
-    hidden_cols = [c for c in filtered.columns if c.startswith("_")]
+    cols_to_hide = [c for c in filtered.columns if c.startswith("_") or c == "Sous-perf."]
     styled = (
         filtered
         .style
         .apply(color_row, axis=1)
-        .format({
+        .format({k: v for k, v in {
             "Score":           "{:.1f}",
             "Vit. moy (km/h)": "{:.2f}",
             "Distance (m)":    "{:.1f}",
             "Taux pass. (%)":  "{:.1f}",
             "Possession (%)":  "{:.1f}",
-        })
+        }.items() if k in filtered.columns})
         .hide(axis="index")
-        .hide(hidden_cols + ["Sous-perf."], axis="columns")
     )
+    if cols_to_hide:
+        styled = styled.hide(cols_to_hide, axis="columns")
     st.dataframe(styled, width="stretch", height=520)
 
     st.caption(
@@ -270,45 +276,48 @@ with tab_players:
 with tab_charts:
     df_full = players_df(stats)
 
-    # ── Possession par équipe ──────────────────────────────────────────────────
-    poss = stats.get("possession_equipes", {})
-    if poss:
-        st.subheader("Possession par équipe")
-        poss_df = pd.DataFrame(
-            {"Équipe": list(poss.keys()), "Possession (%)": list(poss.values())}
+    if df_full.empty:
+        st.info("Aucune donnée joueur disponible.")
+    else:
+        # ── Possession par équipe ──────────────────────────────────────────────────
+        poss = stats.get("possession_equipes", {})
+        if poss:
+            st.subheader("Possession par équipe")
+            poss_df = pd.DataFrame(
+                {"Équipe": list(poss.keys()), "Possession (%)": list(poss.values())}
+            )
+            st.bar_chart(poss_df.set_index("Équipe"), color=["#3a86ff"])
+
+        st.markdown("---")
+
+        # ── Score, Vitesse, Distance ───────────────────────────────────────────────
+        chart_metric = st.selectbox(
+            "Métrique à afficher",
+            ["Score", "Vit. moy (km/h)", "Distance (m)", "Possession (%)"],
         )
-        st.bar_chart(poss_df.set_index("Équipe"), color=["#3a86ff"])
 
-    st.markdown("---")
+        chart_df = (
+            df_full[["ID", "Équipe", chart_metric]]
+            .sort_values(chart_metric, ascending=False)
+            .assign(couleur=lambda d: d["Équipe"].map({"E1": "#3a86ff", "E2": "#ff006e"}))
+            .set_index("ID")
+        )
 
-    # ── Score, Vitesse, Distance ───────────────────────────────────────────────
-    chart_metric = st.selectbox(
-        "Métrique à afficher",
-        ["Score", "Vit. moy (km/h)", "Distance (m)", "Possession (%)"],
-    )
+        st.bar_chart(chart_df[[chart_metric, "couleur"]], color="couleur")
 
-    chart_df = (
-        df_full[["ID", "Équipe", chart_metric]]
-        .sort_values(chart_metric, ascending=False)
-        .assign(couleur=lambda d: d["Équipe"].map({"E1": "#3a86ff", "E2": "#ff006e"}))
-        .set_index("ID")
-    )
+        st.markdown("---")
 
-    st.bar_chart(chart_df[[chart_metric, "couleur"]], color="couleur")
-
-    st.markdown("---")
-
-    # ── Scatter: vitesse vs distance ──────────────────────────────────────────
-    st.subheader("Vitesse moyenne vs Distance parcourue")
-    scatter_df = df_full[["ID", "Équipe", "Vit. moy (km/h)", "Distance (m)", "Score", "Sous-perf."]].copy()
-    scatter_df["Couleur"] = scatter_df["Équipe"].map({"E1": "#3a86ff", "E2": "#ff006e"})
-    st.scatter_chart(
-        scatter_df,
-        x="Vit. moy (km/h)",
-        y="Distance (m)",
-        color="Couleur",
-        size="Score",
-    )
+        # ── Scatter: vitesse vs distance ──────────────────────────────────────────
+        st.subheader("Vitesse moyenne vs Distance parcourue")
+        scatter_df = df_full[["ID", "Équipe", "Vit. moy (km/h)", "Distance (m)", "Score", "Sous-perf."]].copy()
+        scatter_df["Couleur"] = scatter_df["Équipe"].map({"E1": "#3a86ff", "E2": "#ff006e"})
+        st.scatter_chart(
+            scatter_df,
+            x="Vit. moy (km/h)",
+            y="Distance (m)",
+            color="Couleur",
+            size="Score",
+        )
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # TAB 3 — Substitution recommendations
