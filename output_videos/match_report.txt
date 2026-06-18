@@ -1,5 +1,5 @@
 ======================================================================
-  RAPPORT DE MATCH — 2026-06-16 16:16
+  RAPPORT DE MATCH — 2026-06-18 13:20
 ======================================================================
 
   Match : Équipe A vs Équipe B — Score : +0. 39 joueurs analysés. Performance moyenne : 32.5/100. Fatigue moyenne : 11.0/100.
@@ -69,17 +69,17 @@
 
   DÉCISIONS DE REMPLACEMENT
 ----------------------------------------------------------------------
-  • {'sortant': 'Joueur #3 (CM)', 'entrant': 'Joueur #5 (CM)', 'urgence': 'HAUTE', 'explication': 'Remplacer Joueur #3 (position : CM) — performance = 32. Faire entrer Joueur #5 (fraîcheur physique : 44%).', 'score_compatibilite': 66.1}
-  • {'sortant': 'Joueur #8 (CAM)', 'entrant': 'Joueur #1 (RW)', 'urgence': 'HAUTE', 'explication': 'Remplacer Joueur #8 (position : CAM) — performance = 32. Faire entrer Joueur #1 (fraîcheur physique : 56%).', 'score_compatibilite': 69.7}
-  • {'sortant': 'Joueur #14 (CB)', 'entrant': 'Joueur #9 (LW)', 'urgence': 'HAUTE', 'explication': 'Remplacer Joueur #14 (position : CB) — performance = 32. Faire entrer Joueur #9 (fraîcheur physique : 38%).', 'score_compatibilite': 52.6}
+  • {'sortant': 'Joueur #16 (CM)', 'entrant': 'Joueur #5 (CM)', 'urgence': 'HAUTE', 'explication': 'Remplacer Joueur #16 (position : CM) — performance = 32. Faire entrer Joueur #5 (fraîcheur physique : 44%).', 'score_compatibilite': 66.1}
+  • {'sortant': 'Joueur #132 (0)', 'entrant': 'Joueur #1 (RW)', 'urgence': 'HAUTE', 'explication': 'Remplacer Joueur #132 (position : 0) — performance = 32. Faire entrer Joueur #1 (fraîcheur physique : 56%).', 'score_compatibilite': 54.7}
+  • {'sortant': 'Joueur #12 (RW)', 'entrant': 'Joueur #3 (CF)', 'urgence': 'HAUTE', 'explication': 'Remplacer Joueur #12 (position : RW) — performance = 32. Faire entrer Joueur #3 (fraîcheur physique : 38%).', 'score_compatibilite': 65.5}
 
   TACTIQUE RECOMMANDÉE
 ----------------------------------------------------------------------
   formation_recommandee: 4-3-3
-  score_global: 51.8
-  possession_estimee: 60.4%
-  xG_estime: 1.75
-  risque_defensif: 36.2
+  score_global: 51.4
+  possession_estimee: 59.2%
+  xG_estime: 1.78
+  risque_defensif: 37.1
   description: Formation offensive équilibrée. Bon pressing, ailiers rapides.
 
   ANALYSE ADVERSE
