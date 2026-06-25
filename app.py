@@ -5,10 +5,10 @@ import threading
 import time
 from pathlib import Path
 
+import altair as alt
 import pandas as pd
 import streamlit as st
 
-# ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="Football Manager",
     page_icon="⚽",
@@ -21,6 +21,7 @@ OUTPUT_DIR.mkdir(exist_ok=True)
 
 TEAM_COLORS = {1: "#3a86ff", 2: "#ff006e"}
 POSTE_ORDER = ["Gardien", "Défenseur", "Milieu", "Attaquant"]
+RISK_COLORS = {"Faible": "#2ecc71", "Moyen": "#f39c12", "Élevé": "#e74c3c"}
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -44,11 +45,13 @@ def players_df(stats: dict) -> pd.DataFrame:
     rows = []
     for p in stats["joueurs"].values():
         rows.append({
-            "ID":        f"P{p['player_id']}",
-            "Équipe":    f"E{p['equipe']}" if p["equipe"] else "?",
-            "Poste":     p["poste"] or "?",
-            "Score":     p["score"],
-            "Rang":      p["classement"],
+            "ID":              f"P{p['player_id']}",
+            "Équipe":          f"E{p['equipe']}" if p["equipe"] else "?",
+            "Poste":           p["poste"] or "?",
+            "Score":           p["score"],
+            "Rang":            p["classement"],
+            "Fatigue":         p.get("fatigue_score", 0.0),
+            "Risque":          p.get("injury_risk_label", "Faible"),
             "Vit. moy (km/h)": p["vitesse_moyenne_kmh"],
             "Distance (m)":    p["distance_m"],
             "Passes tent.":    p["passes_tentees"],
@@ -158,7 +161,7 @@ if stop_btn:
     st.session_state["tracking"] = False
     st.rerun()
 
-# ── Live progress (fragment = only this section reruns, not the whole page) ───
+# ── Live progress ─────────────────────────────────────────────────────────────
 
 @st.fragment(run_every=0.5)
 def _tracking_progress() -> None:
@@ -175,13 +178,16 @@ def _tracking_progress() -> None:
         for line in reversed(lines):
             if "/" in line and "frames" in line:
                 try:
-                    pct_val  = int(float(line.split("(")[1].split("%")[0])) / 100
+                    pct_val  = float(line.split("(")[1].split("%")[0]) / 100
                     pct_text = line.strip()
                     break
                 except Exception:
                     pass
         st.info(f"Tracking en cours — **{vid_name}**")
         st.progress(pct_val, text=pct_text)
+        preview_path = OUTPUT_DIR / f"{Path(vid_name).stem}_preview.jpg"
+        if preview_path.exists():
+            st.image(str(preview_path), caption="Aperçu en direct", use_container_width=True)
     else:
         rc = proc.returncode if proc else -1
         st.session_state["tracking"] = False
@@ -219,8 +225,8 @@ col4.metric("Joueurs détectés", len(stats["joueurs"]))
 
 # ── Tabs ──────────────────────────────────────────────────────────────────────
 
-tab_players, tab_charts, tab_subst, tab_video = st.tabs(
-    ["Joueurs", "Graphiques", "Substitutions", "Vidéo annotée"]
+tab_players, tab_charts, tab_subst, tab_adverse, tab_rapport, tab_video = st.tabs(
+    ["Joueurs", "Graphiques", "Substitutions", "Analyse adverse", "Rapport", "Vidéo annotée"]
 )
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -255,6 +261,7 @@ with tab_players:
         .apply(color_row, axis=1)
         .format({k: v for k, v in {
             "Score":           "{:.1f}",
+            "Fatigue":         "{:.0f}",
             "Vit. moy (km/h)": "{:.2f}",
             "Distance (m)":    "{:.1f}",
             "Taux pass. (%)":  "{:.1f}",
@@ -267,7 +274,8 @@ with tab_players:
     st.dataframe(styled, width="stretch", height=520)
 
     st.caption(
-        "🔵 Équipe 1 · 🔴 Équipe 2 · fond rouge = sous-performance détectée"
+        "🔵 Équipe 1 · 🔴 Équipe 2 · fond rouge = sous-performance · "
+        "Fatigue : 0-100 (drop de vitesse 1ère→2ème mi-temps) · Risque : Faible / Moyen / Élevé"
     )
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -276,48 +284,114 @@ with tab_players:
 with tab_charts:
     df_full = players_df(stats)
 
+    TEAM_DOMAIN  = ["E1", "E2", "?"]
+    TEAM_RANGE   = ["#3a86ff", "#ff006e", "#888888"]
+    team_scale   = alt.Scale(domain=TEAM_DOMAIN, range=TEAM_RANGE)
+
     if df_full.empty:
         st.info("Aucune donnée joueur disponible.")
     else:
-        # ── Possession par équipe ──────────────────────────────────────────────────
+        # ── Possession par équipe ──────────────────────────────────────────────
         poss = stats.get("possession_equipes", {})
         if poss:
             st.subheader("Possession par équipe")
-            poss_df = pd.DataFrame(
-                {"Équipe": list(poss.keys()), "Possession (%)": list(poss.values())}
+            poss_df = pd.DataFrame({
+                "Équipe":         [k.replace("equipe_", "Équipe ") for k in poss],
+                "Possession (%)": list(poss.values()),
+            })
+            poss_chart = (
+                alt.Chart(poss_df)
+                .mark_bar()
+                .encode(
+                    x=alt.X("Équipe:N", axis=alt.Axis(labelAngle=0)),
+                    y=alt.Y("Possession (%):Q", scale=alt.Scale(domain=[0, 100])),
+                    color=alt.Color(
+                        "Équipe:N",
+                        scale=alt.Scale(
+                            domain=["Équipe 1", "Équipe 2"],
+                            range=["#3a86ff", "#ff006e"],
+                        ),
+                        legend=None,
+                    ),
+                    tooltip=["Équipe:N", alt.Tooltip("Possession (%):Q", format=".1f")],
+                )
+                .properties(height=300)
             )
-            st.bar_chart(poss_df.set_index("Équipe"), color=["#3a86ff"])
+            st.altair_chart(poss_chart, use_container_width=True)
 
         st.markdown("---")
 
-        # ── Score, Vitesse, Distance ───────────────────────────────────────────────
+        # ── Métrique par joueur ────────────────────────────────────────────────
         chart_metric = st.selectbox(
             "Métrique à afficher",
-            ["Score", "Vit. moy (km/h)", "Distance (m)", "Possession (%)"],
+            ["Score", "Fatigue", "Vit. moy (km/h)", "Distance (m)", "Possession (%)"],
         )
-
-        chart_df = (
-            df_full[["ID", "Équipe", chart_metric]]
-            .sort_values(chart_metric, ascending=False)
-            .assign(couleur=lambda d: d["Équipe"].map({"E1": "#3a86ff", "E2": "#ff006e"}))
-            .set_index("ID")
+        metric_df = df_full[["ID", "Équipe", chart_metric]].sort_values(chart_metric, ascending=False)
+        metric_chart = (
+            alt.Chart(metric_df)
+            .mark_bar()
+            .encode(
+                x=alt.X("ID:N", sort=None, axis=alt.Axis(labelAngle=-45)),
+                y=alt.Y(f"{chart_metric}:Q"),
+                color=alt.Color("Équipe:N", scale=team_scale),
+                tooltip=["ID:N", "Équipe:N", alt.Tooltip(f"{chart_metric}:Q", format=".1f")],
+            )
+            .properties(height=350)
         )
-
-        st.bar_chart(chart_df[[chart_metric, "couleur"]], color="couleur")
+        st.altair_chart(metric_chart, use_container_width=True)
 
         st.markdown("---")
 
-        # ── Scatter: vitesse vs distance ──────────────────────────────────────────
+        # ── Scatter : vitesse vs distance ──────────────────────────────────────
         st.subheader("Vitesse moyenne vs Distance parcourue")
-        scatter_df = df_full[["ID", "Équipe", "Vit. moy (km/h)", "Distance (m)", "Score", "Sous-perf."]].copy()
-        scatter_df["Couleur"] = scatter_df["Équipe"].map({"E1": "#3a86ff", "E2": "#ff006e"})
-        st.scatter_chart(
-            scatter_df,
-            x="Vit. moy (km/h)",
-            y="Distance (m)",
-            color="Couleur",
-            size="Score",
+        scatter_df = (
+            df_full[["ID", "Équipe", "Vit. moy (km/h)", "Distance (m)", "Score"]]
+            .copy()
+            .rename(columns={"Vit. moy (km/h)": "Vitesse", "Distance (m)": "Distance"})
         )
+        scatter_chart = (
+            alt.Chart(scatter_df)
+            .mark_circle()
+            .encode(
+                x=alt.X("Vitesse:Q",  title="Vitesse moyenne (km/h)"),
+                y=alt.Y("Distance:Q", title="Distance parcourue (m)"),
+                color=alt.Color("Équipe:N", scale=team_scale),
+                size=alt.Size("Score:Q", scale=alt.Scale(range=[50, 400])),
+                tooltip=[
+                    "ID:N", "Équipe:N",
+                    alt.Tooltip("Vitesse:Q",  format=".1f", title="Vitesse (km/h)"),
+                    alt.Tooltip("Distance:Q", format=".0f", title="Distance (m)"),
+                    alt.Tooltip("Score:Q",    format=".1f"),
+                ],
+            )
+            .properties(height=350)
+            .interactive()
+        )
+        st.altair_chart(scatter_chart, use_container_width=True)
+
+        st.markdown("---")
+
+        # ── Fatigue par joueur ─────────────────────────────────────────────────
+        st.subheader("Fatigue par joueur")
+        fat_df = df_full[["ID", "Équipe", "Fatigue", "Risque"]].sort_values("Fatigue", ascending=False)
+        risk_scale = alt.Scale(
+            domain=["Faible", "Moyen", "Élevé"],
+            range=["#2ecc71", "#f39c12", "#e74c3c"],
+        )
+        fat_chart = (
+            alt.Chart(fat_df)
+            .mark_bar()
+            .encode(
+                x=alt.X("ID:N", sort=None, axis=alt.Axis(labelAngle=-45)),
+                y=alt.Y("Fatigue:Q", scale=alt.Scale(domain=[0, 100])),
+                color=alt.Color("Risque:N", scale=risk_scale),
+                tooltip=["ID:N", "Équipe:N",
+                         alt.Tooltip("Fatigue:Q", format=".0f"),
+                         "Risque:N"],
+            )
+            .properties(height=350)
+        )
+        st.altair_chart(fat_chart, use_container_width=True)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # TAB 3 — Substitution recommendations
@@ -330,20 +404,169 @@ with tab_subst:
         st.warning(f"{len(subst)} substitution(s) recommandée(s)")
         for _, r in sorted(subst.items(), key=lambda x: x[1]["score"]):
             team_color = TEAM_COLORS.get(r["equipe"], "#888")
+            risk_color = RISK_COLORS.get(r.get("interpretation", "").split("Risque blessure : ")[-1].strip(), "#888")
             with st.container(border=True):
-                c1, c2 = st.columns([1, 3])
-                c1.markdown(
-                    f"<div style='font-size:2rem;font-weight:bold;color:{team_color};'>"
-                    f"P{r['player_id']}</div>"
-                    f"<div style='color:{team_color};'>E{r['equipe']} · {r['poste'] or '?'}</div>",
-                    unsafe_allow_html=True,
-                )
-                c2.markdown(f"**Score : {r['score']:.1f} / 100**")
-                for raison in r["raisons"]:
-                    c2.markdown(f"- {raison}")
+                interp = r.get("interpretation", "")
+                if interp:
+                    lines = interp.split("\n")
+                    st.markdown(
+                        f"<span style='font-size:1.1rem;font-weight:bold;color:{team_color};'>"
+                        f"{lines[0]}</span>",
+                        unsafe_allow_html=True,
+                    )
+                    for line in lines[1:]:
+                        if "Risque blessure" in line:
+                            level = line.split(": ")[-1].strip()
+                            rc    = RISK_COLORS.get(level, "#888")
+                            st.markdown(
+                                f"<span style='color:{rc};font-weight:bold;'>{line}</span>",
+                                unsafe_allow_html=True,
+                            )
+                        else:
+                            st.markdown(line)
+                else:
+                    st.markdown(f"**P{r['player_id']}** — Score : {r['score']:.1f}/100")
+                    for raison in r["raisons"]:
+                        st.markdown(f"- {raison}")
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# TAB 4 — Annotated video
+# TAB 4 — Analyse adverse
+# ═══════════════════════════════════════════════════════════════════════════════
+with tab_adverse:
+    analyse_adv = stats.get("analyse_adverse", {})
+    if not analyse_adv:
+        st.info("Analyse adverse non disponible (données insuffisantes ou une seule équipe détectée).")
+    else:
+        st.caption(
+            "Le système détecte deux équipes (E1 / E2) par couleur de maillot. "
+            "Sélectionnez votre équipe pour afficher uniquement le joueur adverse à cibler."
+        )
+        mon_equipe = st.selectbox(
+            "Votre équipe",
+            options=["— Afficher les deux —", "E1", "E2"],
+            index=0,
+        )
+
+        for team_key, adv in sorted(analyse_adv.items()):
+            eq_num = team_key.replace("equipe_", "")
+            # equipe_1 = conseil pour l'équipe 1 (joueur cible dans l'équipe 2)
+            if mon_equipe != "— Afficher les deux —" and mon_equipe != f"E{eq_num}":
+                continue
+            tc = TEAM_COLORS.get(int(eq_num), "#888")
+            with st.container(border=True):
+                st.markdown(
+                    f"<span style='color:{tc};font-size:1.1rem;font-weight:bold;'>"
+                    f"Conseil pour Équipe {eq_num}</span>",
+                    unsafe_allow_html=True,
+                )
+                c1, c2, c3, c4 = st.columns(4)
+                c1.metric("Joueur adverse à cibler", adv["joueur_cible"])
+                c2.metric("Poste",                   adv["poste"])
+                c3.metric("Score adverse",            f"{adv['score']:.0f}/100")
+                c4.metric("Zone",                     adv["zone"].capitalize())
+                st.info(adv["conseil"])
+                st.caption(
+                    f"Vitesse : {adv['vitesse_kmh']:.1f} km/h · "
+                    f"Taux passes : {adv['taux_passes_pct']:.0f}%"
+                )
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TAB 5 — Rapport automatique
+# ═══════════════════════════════════════════════════════════════════════════════
+with tab_rapport:
+    rapport = stats.get("rapport_automatique", {})
+
+    if not rapport:
+        st.info(
+            "Rapport non disponible. Ce fichier de stats a été généré avec une ancienne version — "
+            "relancez le tracking pour obtenir un rapport complet."
+        )
+    else:
+        # KPI
+        best  = rapport.get("meilleur_joueur")
+        worst = rapport.get("pire_joueur")
+        dom   = rapport.get("equipe_dominante")
+
+        c1, c2, c3 = st.columns(3)
+        if best:
+            c1.metric(
+                "Meilleur joueur",
+                f"{best['id']} ({best['poste']})",
+                f"Score {best['score']:.0f}/100",
+            )
+        if worst:
+            c2.metric(
+                "Joueur en difficulté",
+                f"{worst['id']} ({worst['poste']})",
+                f"Score {worst['score']:.0f}/100",
+                delta_color="inverse",
+            )
+        if dom:
+            poss_pct = rapport.get("possession", {}).get(dom, 0)
+            c3.metric(
+                "Équipe dominante",
+                dom.replace("equipe_", "Équipe "),
+                f"{poss_pct}% possession",
+            )
+
+        # Substitutions
+        subst_items = rapport.get("substitutions", [])
+        if subst_items:
+            st.markdown("---")
+            st.subheader(f"Substitutions recommandées ({rapport.get('nb_substitutions', 0)})")
+            for s in subst_items:
+                team_num = int(s["equipe"].replace("E", "")) if s["equipe"].startswith("E") else None
+                tc = TEAM_COLORS.get(team_num, "#888")
+                with st.container(border=True):
+                    lines = s["interpretation"].split("\n")
+                    st.markdown(
+                        f"<span style='color:{tc};font-weight:bold;'>{lines[0]}</span>",
+                        unsafe_allow_html=True,
+                    )
+                    for line in lines[1:]:
+                        if "Risque blessure" in line:
+                            level = line.split(": ")[-1].strip()
+                            rc    = RISK_COLORS.get(level, "#888")
+                            st.markdown(
+                                f"<span style='color:{rc};font-weight:bold;'>{line}</span>",
+                                unsafe_allow_html=True,
+                            )
+                        else:
+                            st.markdown(line)
+
+        # Analyse adverse (recap)
+        adv_data = rapport.get("analyse_adverse", {})
+        if adv_data:
+            st.markdown("---")
+            st.subheader("Analyse adverse")
+            for team_key, adv in sorted(adv_data.items()):
+                eq_num = team_key.replace("equipe_", "")
+                tc     = TEAM_COLORS.get(int(eq_num), "#888")
+                st.markdown(
+                    f"<span style='color:{tc};font-weight:bold;'>Équipe {eq_num}</span> — {adv['conseil']}",
+                    unsafe_allow_html=True,
+                )
+
+        # Export
+        st.markdown("---")
+        st.subheader("Exporter le rapport")
+        stem = Path(stats["video"]).stem
+        ca, cb = st.columns(2)
+        ca.download_button(
+            "⬇ Télécharger JSON",
+            data=json.dumps(rapport, indent=2, ensure_ascii=False),
+            file_name=f"{stem}_rapport.json",
+            mime="application/json",
+        )
+        cb.download_button(
+            "⬇ Télécharger TXT",
+            data=rapport.get("texte", ""),
+            file_name=f"{stem}_rapport.txt",
+            mime="text/plain",
+        )
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TAB 6 — Annotated video
 # ═══════════════════════════════════════════════════════════════════════════════
 with tab_video:
     out_video = output_video_for(selected_video)

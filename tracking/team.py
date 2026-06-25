@@ -31,17 +31,36 @@ def update_referee_detection(state):
     features = np.array([np.median(state.jersey_colors[p], axis=0) for p in pnos],
                         dtype=np.float32)
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 50, 0.2)
-    _, labels, _ = cv2.kmeans(features, 3, None, criteria, 10, cv2.KMEANS_PP_CENTERS)
-    labels   = labels.flatten()
-    counts   = [int(np.sum(labels == i)) for i in range(3)]
-    ref_cls  = int(np.argmin(counts))
+
+    # ── Essai k=3 (équipe1 + équipe2 + arbitre) ──────────────────────────────
+    _, labels3, centers3 = cv2.kmeans(features, 3, None, criteria, 10, cv2.KMEANS_PP_CENTERS)
+    labels3  = labels3.flatten()
+    counts3  = [int(np.sum(labels3 == i)) for i in range(3)]
+    ref_cls  = int(np.argmin(counts3))
     team_cls = [i for i in range(3) if i != ref_cls]
+    ref_valid = (counts3[ref_cls] / max(sum(counts3), 1)) <= 0.20
 
-    # Le cluster arbitre ne doit pas dépasser 20 % des joueurs détectés :
-    # au-delà, le k-means confond une équipe avec des arbitres.
-    ref_valid = (counts[ref_cls] / max(sum(counts), 1)) <= 0.20
+    n1 = counts3[team_cls[0]]
+    n2 = counts3[team_cls[1]]
 
-    for pno, lbl in zip(pnos, labels):
+    # ── Fallback k=2 si les équipes sont trop déséquilibrées (ratio > 3:1) ──
+    if max(n1, n2) / max(min(n1, n2), 1) > 3.0:
+        _, labels2, centers2 = cv2.kmeans(features, 2, None, criteria, 10, cv2.KMEANS_PP_CENTERS)
+        labels2 = labels2.flatten()
+        # Stabiliser : cluster le plus sombre (L* bas) → équipe 1
+        if centers2[0][0] > centers2[1][0]:
+            labels2 = 1 - labels2
+        for pno, lbl in zip(pnos, labels2):
+            state.is_referee[pno]  = False
+            state.player_team[pno] = int(lbl) + 1
+        return
+
+    # ── Stabiliser l'ordre équipe1/équipe2 par luminosité L* ─────────────────
+    # Cluster le plus sombre (L* le plus faible) → équipe 1
+    if centers3[team_cls[0]][0] > centers3[team_cls[1]][0]:
+        team_cls = team_cls[::-1]
+
+    for pno, lbl in zip(pnos, labels3):
         lbl = int(lbl)
         if ref_valid and lbl == ref_cls:
             state.is_referee[pno]  = True

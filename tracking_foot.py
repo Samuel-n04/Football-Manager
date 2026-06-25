@@ -33,8 +33,9 @@ from tracking.render import draw_label, slice_detect, iou
 # ── Vidéo en argument ou valeur par défaut ────────────────────────────────────
 VIDEO_PATH  = sys.argv[1] if len(sys.argv) > 1 else os.path.join("input_videos", "match_extrait.mp4")
 _base_name  = os.path.splitext(os.path.basename(VIDEO_PATH))[0]
-OUTPUT_PATH = os.path.join("output_videos", _base_name + "_tracking.mp4")
-STATS_PATH  = os.path.join("output_videos", _base_name + "_stats.json")
+OUTPUT_PATH  = os.path.join("output_videos", _base_name + "_tracking.mp4")
+STATS_PATH   = os.path.join("output_videos", _base_name + "_stats.json")
+PREVIEW_PATH = os.path.join("output_videos", _base_name + "_preview.jpg")
 
 os.makedirs("output_videos", exist_ok=True)
 
@@ -233,9 +234,18 @@ try:
 
         writer.write(display)
 
-        if state.frame_count % 5 == 0:
-            pct = state.frame_count / max(total_frames, 1) * 100
-            print(f"  {state.frame_count}/{total_frames} frames ({pct:.1f}%)")
+        preview     = cv2.resize(display, (display.shape[1] // 2, display.shape[0] // 2))
+        ok, buf     = cv2.imencode('.jpg', preview, [cv2.IMWRITE_JPEG_QUALITY, 65])
+        if not ok:
+            ok, buf = cv2.imencode('.png', preview)
+        if ok:
+            tmp_path = PREVIEW_PATH + ".tmp"
+            with open(tmp_path, 'wb') as _f:
+                _f.write(buf.tobytes())
+            os.replace(tmp_path, PREVIEW_PATH)  # atomic
+
+        pct = state.frame_count / max(total_frames, 1) * 100
+        print(f"  {state.frame_count}/{total_frames} frames ({pct:.1f}%)")
 
 except KeyboardInterrupt:
     print(f"\nInterrompu à la frame {state.frame_count}.")
@@ -243,6 +253,8 @@ except KeyboardInterrupt:
 finally:
     cap.release()
     writer.release()
+    if os.path.exists(PREVIEW_PATH):
+        os.remove(PREVIEW_PATH)
     save_stats(state, VIDEO_PATH, STATS_PATH, fps, state.frame_count)
 
     # Re-encode to H.264 so browsers can play the video

@@ -4,6 +4,41 @@ import cv2
 from tracking.config import FIELD_MASK_REFRESH
 
 
+def _adaptive_field_range(frame):
+    """
+    Sample the center-bottom of the frame (always field in football broadcasts)
+    and return an HSV range that covers the dominant grass color.
+    Works for natural grass, dark synthetic turf, pale synthetic turf, etc.
+    """
+    h, w = frame.shape[:2]
+    # Bottom 35%, center 40%
+    y1, y2 = int(h * 0.65), h
+    x1, x2 = int(w * 0.30), int(w * 0.70)
+    patch = frame[y1:y2, x1:x2]
+    hsv_patch = cv2.cvtColor(patch, cv2.COLOR_BGR2HSV).reshape(-1, 3).astype(np.float32)
+
+    # Dominant color via k-means (k=1 is just the mean, k=2 handles line markings)
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 20, 0.5)
+    _, labels, centers = cv2.kmeans(hsv_patch, 2, None, criteria, 5, cv2.KMEANS_PP_CENTERS)
+    # Pick the cluster with more pixels
+    counts = np.bincount(labels.flatten())
+    field_center = centers[np.argmax(counts)]
+
+    h_c, s_c, v_c = field_center
+    # Build tolerant range
+    h_tol = 25
+    s_tol = max(30, s_c * 0.8 + 15)   # generous on saturation (handles desaturated turf)
+    v_tol = max(50, v_c * 0.5)
+
+    lo = np.array([max(0,   h_c - h_tol),
+                   max(0,   s_c - s_tol),
+                   max(15,  v_c - v_tol)], dtype=np.uint8)
+    hi = np.array([min(180, h_c + h_tol),
+                   255,
+                   min(255, v_c + v_tol)], dtype=np.uint8)
+    return lo, hi
+
+
 def detect_field(state, frame):
     if (state.field_mask_cache is not None
             and state.frame_count - state.field_mask_frame < FIELD_MASK_REFRESH):
@@ -12,7 +47,14 @@ def detect_field(state, frame):
     h, w = frame.shape[:2]
     hsv  = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-    green = cv2.inRange(hsv, np.array([30, 30, 30]), np.array([98, 255, 255]))
+    # Adaptive grass color range
+    lo, hi = _adaptive_field_range(frame)
+    green = cv2.inRange(hsv, lo, hi)
+
+    # Fallback: also always include standard broadcast green
+    std_green = cv2.inRange(hsv, np.array([30, 30, 30]), np.array([98, 255, 255]))
+    green = cv2.bitwise_or(green, std_green)
+
     green = cv2.morphologyEx(green, cv2.MORPH_CLOSE, np.ones((9, 9),  np.uint8))
     green = cv2.morphologyEx(green, cv2.MORPH_OPEN,  np.ones((5, 5),  np.uint8))
 

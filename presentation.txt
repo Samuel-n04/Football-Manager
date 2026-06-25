@@ -1,0 +1,122 @@
+================================================================================
+         FOOTBALL DECISION INTELLIGENCE AI — PRÉSENTATION ORALE
+                        Durée estimée : 8-10 minutes
+================================================================================
+
+
+── INTRODUCTION — Chauvet Darren ────────────────────────────────────────────────
+
+Bonjour à tous. Notre projet s'appelle Football Decision Intelligence AI.
+L'idée de départ est simple : un entraîneur de football manque souvent de
+données objectives pour prendre des décisions pendant un match — qui remplacer,
+où l'équipe adverse est vulnérable, quel joueur est en train de se blesser.
+Notre système répond à ces questions en analysant automatiquement une vidéo de
+match. Chacun d'entre nous a apporté une contribution spécifique pour arriver
+au résultat que vous allez voir. Je vais laisser la parole à chaque membre.
+
+
+── DAO TRUNG-HIEU ────────────────────────────────────────────────────────────────
+
+Mon rôle a été de trouver les données dont on avait besoin pour travailler.
+Concrètement, j'ai cherché des extraits vidéo de matchs utilisables — des clips
+de différents angles, différentes qualités — pour qu'on puisse tester le système
+dans des conditions variées. J'ai aussi effectué une veille technique et trouvé
+des codes de référence sur YOLOv8 et ByteTrack qui nous ont servi de base de
+départ. Sans ces ressources, le projet n'aurait pas pu démarrer aussi vite.
+
+
+── COULIBALY BOURAMA ────────────────────────────────────────────────────────────
+
+De mon côté, je me suis occupé des tests et de la première maquette de
+détection. J'ai implémenté une version prototype avec YOLOv8 pour voir
+concrètement ce qu'on pouvait détecter sur les vidéos — les joueurs, le ballon,
+l'arbitre. C'est moi qui ai calibré les seuils de confiance, défini à partir de
+quand une détection est fiable ou non. Ce travail de validation en amont a
+évité beaucoup d'erreurs dans la version finale.
+
+
+── PIERRE JEAN-SAMUEL ───────────────────────────────────────────────────────────
+
+Moi j'ai travaillé sur l'architecture du code. Avant de coder quoi que ce soit,
+il fallait décider comment organiser le projet — quels modules, quelles
+responsabilités, comment les faire communiquer. J'ai défini la structure en
+8 modules séparés : détection du terrain, tracking, vitesse, passes,
+statistiques… J'ai aussi défini quelles statistiques on allait calculer et sous
+quel format les stocker. Cette base solide a permis à tout le monde de travailler
+sans se marcher dessus.
+
+
+── SASSI ISMAIL ─────────────────────────────────────────────────────────────────
+
+Pour ma part, j'ai fait de la recherche sur les outils existants — StatsBomb,
+Wyscout, des projets open source de football analytics — pour comprendre ce que
+font les professionnels et s'en inspirer. À partir de là, j'ai réalisé une
+maquette du dashboard sous Streamlit : les onglets, les filtres, la façon
+d'afficher les métriques. Cette maquette a servi de référence visuelle pour le
+développement final de l'interface.
+
+
+── FONCTIONNALITÉS — Chauvet Darren ─────────────────────────────────────────────
+
+Concrètement, voici ce que le système fait une fois qu'on lui donne une vidéo.
+
+  DÉTECTION ET TRACKING
+  • Il détecte automatiquement les joueurs, le ballon et l'arbitre grâce à
+    YOLOv8, et les suit d'une frame à l'autre avec ByteTrack et un algorithme
+    de réidentification pour ne jamais perdre un joueur de vue.
+
+  • Il sépare les deux équipes automatiquement par la couleur des maillots,
+    en utilisant un clustering k-means dans l'espace de couleur LAB. Ça
+    fonctionne même sur du gazon synthétique ou des terrains amateurs.
+
+  STATISTIQUES PAR JOUEUR
+  • Pour chaque joueur, on calcule en temps réel : la vitesse moyenne, la
+    distance parcourue, le nombre de passes tentées et réussies, et le
+    pourcentage de possession.
+
+  • On calcule aussi un Score de performance sur 100 qui combine la vitesse,
+    les passes et la distance. Les joueurs en sous-performance sont signalés
+    automatiquement.
+
+  FATIGUE ET RISQUE DE BLESSURE
+  • Le système mesure la fatigue en comparant la vitesse de chaque joueur
+    en première et en deuxième partie de vidéo. Une baisse signale de la
+    fatigue.
+
+  • À partir de la fatigue, de la distance et de la vitesse, on calcule un
+    score de risque de blessure avec trois niveaux : Faible, Moyen, Élevé.
+
+  RECOMMANDATIONS DE SUBSTITUTION
+  • Le système génère automatiquement des recommandations de remplacement
+    avec une explication textuelle : quel joueur remplacer, pourquoi, quel
+    est son niveau de fatigue et son risque de blessure.
+
+  ANALYSE ADVERSE
+  • Pour chaque équipe, le système identifie le joueur adverse le plus faible,
+    sa zone sur le terrain — gauche, centre ou droite — et formule un conseil
+    tactique pour en profiter.
+
+  RAPPORT ET DASHBOARD
+  • Tout ça est présenté dans un dashboard interactif avec 6 onglets :
+    Joueurs, Graphiques, Substitutions, Analyse adverse, Rapport et Vidéo
+    annotée.
+
+  • L'entraîneur peut exporter le rapport complet en JSON ou en texte, et
+    suivre le tracking en temps réel avec un aperçu live pendant le traitement.
+
+
+── CONCLUSION ET DÉMONSTRATION — Chauvet Darren ─────────────────────────────────
+
+En m'appuyant sur tout ce que l'équipe avait apporté — les vidéos de Trung-Hieu,
+les paramètres validés par Bourama, l'architecture de Jean-Samuel, l'interface
+définie par Ismail — j'ai développé le système complet. Bien sûr chaque membre
+a aussi contribué au code dans son domaine.
+
+Le résultat, c'est ce que vous allez voir : on prend une vidéo de match, et en
+quelques minutes on obtient une analyse tactique complète.
+
+Je vous fais la démonstration.
+
+  → Lancer demo_presentation.mp4
+
+================================================================================
