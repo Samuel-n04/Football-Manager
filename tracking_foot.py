@@ -64,7 +64,14 @@ width        = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
 height       = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-writer = cv2.VideoWriter(OUTPUT_PATH, cv2.VideoWriter_fourcc(*"mp4v"), fps, (width, height))
+# Essayer H264 en premier (compatible navigateurs) puis fallback mp4v
+_writer = None
+for _cc in ("avc1", "H264", "mp4v"):
+    _writer = cv2.VideoWriter(OUTPUT_PATH, cv2.VideoWriter_fourcc(*_cc), fps, (width, height))
+    if _writer.isOpened():
+        print(f"Codec vidéo : {_cc}")
+        break
+writer = _writer
 
 print(f"Entrée  : {VIDEO_PATH}")
 print(f"Sortie  : {OUTPUT_PATH}")
