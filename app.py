@@ -6,6 +6,7 @@ import time
 from pathlib import Path
 
 import altair as alt
+import cv2
 import pandas as pd
 import streamlit as st
 
@@ -17,6 +18,7 @@ st.set_page_config(
 
 INPUT_DIR  = Path("input_videos")
 OUTPUT_DIR = Path("output_videos")
+INPUT_DIR.mkdir(exist_ok=True)
 OUTPUT_DIR.mkdir(exist_ok=True)
 
 TEAM_COLORS = {1: "#3a86ff", 2: "#ff006e"}
@@ -32,6 +34,71 @@ def stats_path_for(video_path: Path) -> Path:
 
 def output_video_for(video_path: Path) -> Path:
     return OUTPUT_DIR / (video_path.stem + "_tracking.mp4")
+
+
+def find_output_video(p: Path) -> Path | None:
+    stem = p.stem
+    for candidate in [
+        OUTPUT_DIR / (stem + "_tracking_web.mp4"),
+        OUTPUT_DIR / (stem + "_tracking.mp4"),
+        OUTPUT_DIR / (stem + "_tracking.avi"),
+        OUTPUT_DIR / "output_video.avi",
+    ]:
+        if candidate.exists() and candidate.stat().st_size > 10_000:
+            return candidate
+    return None
+
+
+def is_video_valid(path: Path) -> tuple[bool, int]:
+    cap = cv2.VideoCapture(str(path))
+    if not cap.isOpened():
+        cap.release()
+        return False, 0
+    frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    cap.release()
+    return frames > 0, frames
+
+
+def convert_to_web_mp4(src: Path) -> Path | None:
+    dst = OUTPUT_DIR / (src.stem + "_web.mp4")
+    if dst.exists() and dst.stat().st_size > 10_000:
+        return dst
+    try:
+        r = subprocess.run(
+            ["ffmpeg", "-y", "-i", str(src),
+             "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+             "-movflags", "+faststart", "-an", str(dst)],
+            capture_output=True, timeout=600,
+        )
+        if r.returncode == 0 and dst.exists() and dst.stat().st_size > 10_000:
+            return dst
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+    cap = cv2.VideoCapture(str(src))
+    if not cap.isOpened():
+        return None
+    fps_v = cap.get(cv2.CAP_PROP_FPS) or 25.0
+    w_v   = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    h_v   = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    writer = None
+    for _cc in ("avc1", "H264"):
+        _w = cv2.VideoWriter(str(dst), cv2.VideoWriter_fourcc(*_cc), fps_v, (w_v, h_v))
+        if _w.isOpened():
+            writer = _w
+            break
+    if writer is None:
+        cap.release()
+        return None
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        writer.write(frame)
+    cap.release()
+    writer.release()
+    if dst.exists() and dst.stat().st_size > 10_000:
+        return dst
+    return None
 
 
 def load_stats(path: Path) -> dict | None:
@@ -569,8 +636,40 @@ with tab_rapport:
 # TAB 6 — Annotated video
 # ═══════════════════════════════════════════════════════════════════════════════
 with tab_video:
-    out_video = output_video_for(selected_video)
-    if out_video.exists():
-        st.video(str(out_video))
-    else:
+    raw_video = find_output_video(selected_video)
+
+    if raw_video is None:
         st.info("Aucune vidéo annotée trouvée. Lancez le tracking pour en générer une.")
+    else:
+        valid, n_frames = is_video_valid(raw_video)
+
+        if not valid:
+            st.error(
+                f"Le fichier `{raw_video.name}` est corrompu ou vide.  \n"
+                "Le tracking a probablement été interrompu trop tôt.  \n"
+                "**Relancez le tracking et laissez-le terminer complètement.**"
+            )
+        else:
+            st.caption(f"Source : `{raw_video.name}` — {n_frames} frames")
+
+            with st.spinner("Conversion H264 pour le navigateur…"):
+                web_video = convert_to_web_mp4(raw_video)
+
+            if web_video:
+                try:
+                    st.video(web_video.read_bytes(), format="video/mp4")
+                except Exception as e:
+                    st.warning(f"Lecture dans le navigateur échouée : {e}")
+            else:
+                st.warning(
+                    "Conversion H264 impossible (ffmpeg non installé et codec avc1 non disponible).  \n"
+                    "La vidéo est disponible en téléchargement ci-dessous."
+                )
+
+            video_to_dl = web_video or raw_video
+            st.download_button(
+                label=f"Télécharger `{video_to_dl.name}`",
+                data=video_to_dl.read_bytes(),
+                file_name=video_to_dl.name,
+                mime="video/mp4" if video_to_dl.suffix == ".mp4" else "video/x-msvideo",
+            )
