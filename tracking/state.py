@@ -1,4 +1,5 @@
 from collections import defaultdict
+from tracking.fatigue import FatigueTracker
 
 
 class TrackingState:
@@ -50,3 +51,7 @@ class TrackingState:
 
         # Rendering
         self.player_colors: dict = {}  # pno → couleur BGR assignée à la première apparition
+
+        # ── Semaine 2 — Fatigue trackers ──────────────────────────────────────
+        # fatigue_trackers[pno] = FatigueTracker (mis à jour frame par frame)
+        self.fatigue_trackers: dict = defaultdict(FatigueTracker)

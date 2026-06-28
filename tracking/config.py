@@ -4,11 +4,11 @@ LABEL_THICK  = 1
 
 BALL_COLOR = (0, 255, 255)
 
-REID_MAX_FRAMES  = 120   # ~4 s à 30 fps
-REID_MAX_DIST    = 150   # pixels : distance max position (prédite) pour accepter un match
-REID_POS_WEIGHT  = 0.30  # poids position dans le coût
-REID_APP_WEIGHT  = 0.70  # poids apparence dans le coût
-REID_MAX_COST    = 0.32  # coût max pour accepter un réassignement (sinon nouveau joueur)
+REID_MAX_FRAMES  = 300   # ~10 s à 30 fps — assez long pour les sorties de cadre caméra
+REID_MAX_DIST    = 200   # pixels : augmenté pour absorber les grands déplacements caméra
+REID_POS_WEIGHT  = 0.25  # poids position (réduit : position moins fiable après longue absence)
+REID_APP_WEIGHT  = 0.75  # poids apparence (augmenté : couleur maillot = identifiant principal)
+REID_MAX_COST    = 0.38  # légèrement assoupli pour réassigner des joueurs revenus de hors-champ
 JERSEY_MAX_HIST  = 150   # cap sur l'historique couleur maillot
 
 # Détection de switch interne du tracker (même tid → joueur différent)
@@ -27,7 +27,9 @@ BALL_PROX_PX           = 110
 PASS_MAX_FLIGHT_FRAMES = 90   # ~3 s : timeout si la balle n'arrive pas
 
 FIELD_MASK_REFRESH = 5
-MIN_PLAYER_FRAMES  = 90    # frames minimum pour apparaître dans les stats (~3s à 30fps)
+MIN_PLAYER_FRAMES  = 150   # frames minimum pour apparaître dans les stats (~5s à 30fps)
+                           # Filtre agressif : élimine les détections parasites et les
+                           # doublons courts créés par sortie momentanée du cadre
 
 SUBST_MIN_FRAMES   = 150    # ~5s à 30fps — minimum pour une recommandation fiable
 SUBST_SCORE_THRESH = 35.0   # score en dessous duquel on recommande un changement

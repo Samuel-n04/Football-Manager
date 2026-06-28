@@ -29,6 +29,7 @@ from tracking.passes import update_pass_detection
 from tracking.speed import estimate_cam_motion, compute_speed
 from tracking.stats import save_stats
 from tracking.render import draw_label, slice_detect, iou
+from tracking.fatigue import update_fatigue
 
 # ── Vidéo en argument ou valeur par défaut ────────────────────────────────────
 VIDEO_PATH  = sys.argv[1] if len(sys.argv) > 1 else os.path.join("input_videos", "match_extrait.mp4")
@@ -151,6 +152,13 @@ try:
                     / PX_PER_METER
                 )
             state.player_prev_pos[pno] = (cx, cy)
+
+            # ── Semaine 2 — Mise à jour Fatigue Score ─────────────────────────
+            update_fatigue(
+                state.fatigue_trackers[pno],
+                speed_kmh=speed,
+                distance_m=state.player_distance[pno],
+            )
 
             # Historique position terrain (sous-échantillonné)
             if state.frame_count % 5 == 0:
