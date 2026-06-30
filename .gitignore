@@ -1,6 +1,7 @@
 # Environnement virtuel
 foot_env/
 venv/
+.venv/
 
 # Modèles YOLO (gros fichiers)
 *.pt
